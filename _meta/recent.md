@@ -1,10 +1,12 @@
 ---
 title: Recently Changed
-updated: 2026-04-30 21:38 UTC
+updated: 2026-04-30 21:43 UTC
 ---
 
 # Recently Changed
 
+- [[user/projects|Projects]] — 2026-04-30 21:43:18.751664+00:00
+- [[user/README|User Space]] — 2026-04-30 21:42:43.240819+00:00
 - [[system/config/vconsole.conf|vconsole.conf]] — 2026-04-30 21:38:18.485676+00:00
 - [[system/config/mkinitcpio.conf|mkinitcpio.conf]] — 2026-04-30 21:36:53.108915+00:00
 - [[system/config/makepkg.conf|makepkg.conf]] — 2026-04-30 21:36:53.107440+00:00
@@ -18,7 +20,6 @@ updated: 2026-04-30 21:38 UTC
 - [[user/research/README|Research]] — 2026-04-30 21:36:53.093820+00:00
 - [[user/projects/README|Projects]] — 2026-04-30 21:36:53.093765+00:00
 - [[user/notes/README|Notes]] — 2026-04-30 21:36:53.093708+00:00
-- [[user/README|User Space]] — 2026-04-30 21:36:53.093649+00:00
 - [[system/overview|System Overview]] — 2026-04-30 21:36:53.093582+00:00
 - [[system/README|System Space]] — 2026-04-30 21:36:53.093487+00:00
 - [[README|Wiki Index]] — 2026-04-30 21:36:53.093363+00:00

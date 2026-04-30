@@ -1,11 +1,11 @@
 ---
 title: Wiki Index
-updated: 2026-04-30 21:38 UTC
+updated: 2026-04-30 21:43 UTC
 ---
 
 # Wiki Index
 
-*19 pages — last rebuilt 2026-04-30 21:38 UTC*
+*20 pages — last rebuilt 2026-04-30 21:43 UTC*
 
 ## Root
 
@@ -30,6 +30,7 @@ updated: 2026-04-30 21:38 UTC
 - [[user/notes/README|Notes]]  `space`
 - [[user/notes|Notes]]  `space`
 - [[user/projects/README|Projects]]  `space`
+- [[user/projects|Projects]]  `space`
 - [[user/research/README|Research]]  `space`
 - [[user/research|Research]]  `space`
 - [[user/README|User Space]]  `space`

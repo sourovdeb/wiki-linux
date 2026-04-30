@@ -1,7 +1,7 @@
 ---
 title: Wiki Index
-created: 2026-04-30T21:55:31.832329+00:00
-updated: 2026-04-30T21:55:31.832329+00:00
+created: 2026-04-30T21:58:48.660535+00:00
+updated: 2026-04-30T21:58:48.660535+00:00
 tags: [home, index]
 cssclasses: [wiki-index]
 ---
@@ -9,44 +9,36 @@ cssclasses: [wiki-index]
 # Wiki Index
 
 
-This vault is the maintained knowledge layer for the machine.
+This vault is the main knowledge and navigation space for the machine.
 
-It follows the LLM Wiki pattern:
+If you are new here, start with [[START-HERE|Start Here]].
 
-- raw sources stay immutable outside the wiki
-- the wiki stores maintained summaries, mirrors, and analyses
-- schema documents in the repo tell the LLM how to keep the wiki consistent
+## Most Common Pages
 
-## Index
+- [[START-HERE|Start Here]]
+- [[system/overview|Machine overview]]
+- [[sources/README|Add and review sources]]
+- [[_meta/recent|Recent changes]]
+- [[_meta/log|Activity log]]
+
+## Browse By Area
 
 - [[sources/README|Sources]]
 - [[system/README|System]]
 - [[user/notes/README|Notes]]
 - [[user/projects/README|Projects]]
 - [[user/research/README|Research]]
-- [[_meta/index|Index]]
-- [[_meta/log|Activity log]]
+- [[_meta/index|Full index]]
 
-## Operations
+## What You Can Do Here
 
-- `wiki ingest <file>`
-- `wiki ask "question"`
-- `wiki lint`
-- `wiki search "term"`
-- `wiki sync`
+- read simple summaries of system files
+- collect documents and notes into one place
+- ask questions against the wiki
+- review what changed recently
+- run maintenance checks
 
-## Machine Layer
-
-- [[system/overview|System overview]]
-- [[system/config/pacman.conf|pacman.conf mirror]]
-- [[system/config/fstab|fstab mirror]]
-- [[_meta/recent|Recently changed]]
-
-## Project Layer
-
-- [[user/projects/wiki-linux|Wiki-OS project]]
-
-## Quick Commands
+## Common Commands
 
 ```bash
 wiki bootstrap
@@ -57,16 +49,14 @@ wiki search "gpu"
 wiki fix "pacman keyring errors during update"
 ```
 
+## Plain Language Guide
+
+- Sources = original files you want the system to learn from.
+- System = readable explanations of machine configuration.
+- Notes and Projects = your own working pages.
+- Reports = automatic health checks for the wiki.
+
 ## Viewers
 
 - This vault can be browsed in Obsidian, terminal markdown tools, or any editor.
-- The viewer is optional; the maintained markdown artifact is the core product.
-
-## Operating Model
-
-- Real config files stay in `/etc`.
-- Raw sources stay in `~/wiki-sources`.
-- This wiki stores the persistent synthesis and mirrors.
-- The monitor updates mirrors when tracked files change.
-- Ingest and query results can be filed back into the wiki.
-- Git keeps the full history of machine knowledge.
+- Obsidian is usually the easiest option for non-technical users because links and folders are clickable.

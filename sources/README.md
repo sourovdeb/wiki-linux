@@ -1,7 +1,7 @@
 ---
 title: Sources
-created: 2026-04-30T21:55:31.832430+00:00
-updated: 2026-04-30T21:55:31.832430+00:00
+created: 2026-04-30T21:58:48.660998+00:00
+updated: 2026-04-30T21:58:48.660998+00:00
 tags: [sources, ingest]
 cssclasses: [wiki-space]
 ---
@@ -9,7 +9,9 @@ cssclasses: [wiki-space]
 # Sources
 
 
-This space tracks maintained summaries of immutable raw sources.
+This space is where new documents enter the system.
+
+Use it when you want to add a note, article, or document and turn it into a readable wiki page.
 
 ## Raw Source Root
 
@@ -24,6 +26,7 @@ This space tracks maintained summaries of immutable raw sources.
 
 ## Key Pages
 
+- [[START-HERE|Start Here]]
 - [[_meta/index|Index]]
 - [[_meta/log|Activity log]]
 - [[user/projects/wiki-linux|Wiki-OS project]]

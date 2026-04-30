@@ -1,14 +1,14 @@
 ---
 title: System Overview
-created: 2026-04-30T21:55:31.832600+00:00
-updated: 2026-04-30T21:55:31.832600+00:00
+created: 2026-04-30T21:58:48.661455+00:00
+updated: 2026-04-30T21:58:48.661455+00:00
 tags: [system, overview]
 ---
 
 # System Overview
 
 
-This page is the top-level operating snapshot for the current machine.
+This page is the simplest high-level summary of the current machine setup.
 
 ## Core Paths
 
@@ -19,6 +19,7 @@ This page is the top-level operating snapshot for the current machine.
 
 ## Active Layout
 
+- [[START-HERE|Start Here]]
 - [[sources/README|Sources]]
 - [[system/README|System space]]
 - [[user/notes/README|Notes]]

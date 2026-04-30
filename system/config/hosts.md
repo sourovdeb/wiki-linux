@@ -1,7 +1,7 @@
 ---
 title: hosts
 source: /etc/hosts
-updated: 2026-04-30T21:55:31.836130+00:00
+updated: 2026-04-30T21:58:48.669901+00:00
 tags: [system, config]
 ---
 

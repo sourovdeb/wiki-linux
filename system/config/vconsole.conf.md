@@ -1,7 +1,7 @@
 ---
 title: vconsole.conf
 source: /etc/vconsole.conf
-updated: 2026-04-30T21:55:31.839523+00:00
+updated: 2026-04-30T21:58:48.677291+00:00
 tags: [system, config]
 ---
 

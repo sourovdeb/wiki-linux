@@ -4,6 +4,13 @@
     font-weight: 700;
 }
 
+.wiki-index h2,
+.wiki-space h2 {
+    margin-top: 1.8rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .wiki-index table {
     width: 100%;
     border-collapse: separate;
@@ -35,4 +42,16 @@
 .wiki-index ul li,
 .wiki-space ul li {
     margin: 0.35rem 0;
+}
+
+.wiki-index a.internal-link,
+.wiki-space a.internal-link {
+    font-weight: 600;
+    text-decoration-thickness: 2px;
+}
+
+.wiki-start blockquote,
+.wiki-start pre {
+    background: rgba(34, 95, 180, 0.08);
+    border-radius: 12px;
 }

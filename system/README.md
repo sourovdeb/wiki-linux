@@ -1,14 +1,16 @@
 ---
 title: System Space
-created: 2026-04-30T21:55:31.832513+00:00
-updated: 2026-04-30T21:55:31.832513+00:00
+created: 2026-04-30T21:58:48.661185+00:00
+updated: 2026-04-30T21:58:48.661185+00:00
 tags: [system, root]
 cssclasses: [wiki-space]
 ---
 
 # System Space
 
-This space holds system mirrors and operating documentation for the machine.
+This space explains how the computer is configured in plain markdown pages.
+
+Use this section when you want a readable explanation instead of opening raw config files.
 
 ## Monitored Directories
 
@@ -31,6 +33,7 @@ This space holds system mirrors and operating documentation for the machine.
 
 ## Key Pages
 
+- [[START-HERE|Start Here]]
 - [[system/overview|System overview]]
 - [[system/config/pacman.conf|pacman.conf]]
 - [[system/config/fstab|fstab]]

@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# bin/wiki — Wiki-OS unified command-line interface.
+#
+# This script is the single entry point for interacting with the wiki from
+# the terminal. It dispatches to Python modules, system tools (Obsidian, mdt,
+# glow, git), and systemd depending on the subcommand. Add new subcommands
+# as case branches; no Python changes required for purely shell operations.
+#
+# Install: ln -s "$HOME/wiki-os/bin/wiki" "$HOME/.local/bin/wiki"
+
+set -euo pipefail
+
+# --- Locate the project root ---
+# The script follows symlinks so it works from ~/.local/bin/wiki.
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+PYTHON="${WIKI_OS_PYTHON:-python3}"
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-os/config.json}"
+
+# Read WIKI_ROOT from config using python one-liner to avoid bash JSON parsing.
+WIKI_ROOT="$($PYTHON -c "
+import json, pathlib, os
+p = os.environ.get('WIKI_OS_CONFIG', '$CONFIG')
+with open(p) as f: c = json.load(f)
+print(pathlib.Path(c['wiki']['root']).expanduser().resolve())
+" 2>/dev/null || echo "$HOME/wiki")"
+
+# Add project src to PYTHONPATH so `python3 -m src.X` works from anywhere.
+export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
+export WIKI_OS_CONFIG="$CONFIG"
+
+# --- Helpers ---
+_usage() {
+  cat <<EOF
+Wiki-OS — wiki-native knowledge layer for Arch Linux
+
+Usage: wiki <subcommand> [args]
+
+Subcommands:
+  new <title>          Create a new page from template (opens in \$EDITOR)
+  open [page]          Open the wiki in Obsidian (GUI) or mdt (terminal)
+  search <query>       Full-text ripgrep search across the wiki
+  ask "<question>"     Natural-language Q&A powered by the local LLM
+  status               Show recent changes and git status
+  sync                 Commit and push all changes to the configured remote
+  reprocess <file>     Force the LLM to regenerate the wiki page for a file
+  serve                Start the monitor daemon in the foreground (for debugging)
+  config               Print the resolved configuration
+  help                 Show this message
+
+Examples:
+  wiki new "Pacman cheatsheet"
+  wiki search "GPU driver"
+  wiki ask "What does my fstab mount at boot?"
+  wiki sync
+EOF
+}
+
+_require() {
+  command -v "$1" &>/dev/null || {
+    echo "Error: '$1' is not installed. Run install.sh to set up dependencies." >&2
+    exit 1
+  }
+}
+
+# --- Subcommand: new ---
+cmd_new() {
+  local title="${*:-Untitled}"
+  local slug
+  slug="$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')"
+  local date
+  date="$(date +%Y-%m-%d)"
+  local target="$WIKI_ROOT/user/notes/${date}-${slug}.md"
+
+  mkdir -p "$(dirname "$target")"
+
+  if [[ ! -f "$target" ]]; then
+    cat > "$target" <<TEMPLATE
+---
+title: $title
+created: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+tags: []
+---
+
+# $title
+
+TEMPLATE
+  fi
+
+  local editor="${EDITOR:-nvim}"
+  "$editor" "$target"
+}
+
+# --- Subcommand: open ---
+cmd_open() {
+  local page="${1:-}"
+
+  # Prefer Obsidian if running in a graphical session.
+  if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v obsidian &>/dev/null; then
+    if [[ -n "$page" ]]; then
+      obsidian "obsidian://open?vault=wiki&file=${page}"
+    else
+      obsidian "$WIKI_ROOT" &
+    fi
+    return
+  fi
+
+  # Fall back to mdt (terminal markdown navigator).
+  _require mdt
+  if [[ -n "$page" ]]; then
+    mdt "$WIKI_ROOT/$page"
+  else
+    mdt "$WIKI_ROOT"
+  fi
+}
+
+# --- Subcommand: search ---
+cmd_search() {
+  [[ $# -eq 0 ]] && { echo "Usage: wiki search <query>"; exit 1; }
+  _require rg
+
+  local query="$*"
+  # Use glow to render results if available, otherwise just print.
+  if command -v glow &>/dev/null; then
+    rg --color=always --heading --line-number --type md \
+      --ignore-case "$query" "$WIKI_ROOT" | glow -
+  else
+    rg --color=always --heading --line-number --type md \
+      --ignore-case "$query" "$WIKI_ROOT"
+  fi
+}
+
+# --- Subcommand: ask ---
+cmd_ask() {
+  [[ $# -eq 0 ]] && { echo "Usage: wiki ask \"<question>\""; exit 1; }
+  local question="$*"
+  echo "Searching wiki and asking the LLM..."
+  $PYTHON -m src.search "$question"
+}
+
+# --- Subcommand: status ---
+cmd_status() {
+  echo "=== Wiki Status ==="
+  echo "Root: $WIKI_ROOT"
+  echo ""
+
+  # Page count.
+  local count
+  count="$(find "$WIKI_ROOT" -name '*.md' | wc -l)"
+  echo "Pages: $count"
+  echo ""
+
+  # Git status.
+  if [[ -d "$WIKI_ROOT/.git" ]]; then
+    echo "=== Git Status ==="
+    git -C "$WIKI_ROOT" status --short
+    echo ""
+    echo "=== Recent Commits ==="
+    git -C "$WIKI_ROOT" log --oneline -10
+  else
+    echo "(Wiki is not yet a git repository. Run 'wiki sync' to initialise.)"
+  fi
+
+  echo ""
+  echo "=== Daemon Status ==="
+  systemctl --user status wiki-monitor.service --no-pager 2>/dev/null \
+    || echo "Monitor service not running or not installed."
+}
+
+# --- Subcommand: sync ---
+cmd_sync() {
+  echo "Committing and pushing changes..."
+  $PYTHON -m src.sync
+}
+
+# --- Subcommand: reprocess ---
+cmd_reprocess() {
+  [[ $# -eq 0 ]] && { echo "Usage: wiki reprocess <absolute-path-to-file>"; exit 1; }
+  local file="$1"
+  if [[ ! -f "$file" ]]; then
+    echo "File not found: $file" >&2
+    exit 1
+  fi
+  echo "Asking the LLM to regenerate the wiki page for: $file"
+  $PYTHON -c "
+from pathlib import Path
+from datetime import datetime, timezone
+from src.config import cfg
+from src import llm
+from src.monitor import record_self_write
+
+wiki_root = Path(cfg['wiki']['root'])
+source = Path('$file')
+ts = datetime.now(timezone.utc).isoformat()
+page = llm.generate_wiki_page(source, wiki_root, ts)
+if page:
+    target = wiki_root / page['target_path']
+    target.parent.mkdir(parents=True, exist_ok=True)
+    record_self_write(target)
+    target.write_text(page['content'])
+    print(f'Written: {target}')
+else:
+    print('LLM returned no page. Check the daemon log.')
+"
+}
+
+# --- Subcommand: serve (foreground daemon for debugging) ---
+cmd_serve() {
+  echo "Starting monitor in foreground (Ctrl-C to stop)..."
+  $PYTHON -m src.monitor "${@}"
+}
+
+# --- Subcommand: config ---
+cmd_config() {
+  echo "Config file: $CONFIG"
+  echo ""
+  $PYTHON -c "
+import json, os
+with open(os.environ['WIKI_OS_CONFIG']) as f:
+    print(json.dumps(json.load(f), indent=2))
+"
+}
+
+# --- Dispatch ---
+subcommand="${1:-help}"
+shift || true
+
+case "$subcommand" in
+  new)        cmd_new "$@" ;;
+  open)       cmd_open "$@" ;;
+  search)     cmd_search "$@" ;;
+  ask)        cmd_ask "$@" ;;
+  status)     cmd_status ;;
+  sync)       cmd_sync ;;
+  reprocess)  cmd_reprocess "$@" ;;
+  serve)      cmd_serve "$@" ;;
+  config)     cmd_config ;;
+  help|--help|-h) _usage ;;
+  *)
+    echo "Unknown subcommand: $subcommand"
+    echo ""
+    _usage
+    exit 1
+    ;;
+esac

@@ -1,0 +1,12 @@
+[Unit]
+Description=Wiki-OS git auto-commit (one-shot)
+Documentation=file://%h/wiki-os/README.md
+
+[Service]
+Type=oneshot
+ExecStart=%h/wiki-os/.venv/bin/python3 -m src.sync
+WorkingDirectory=%h/wiki-os
+Environment=WIKI_OS_CONFIG=%h/.config/wiki-os/config.json
+Environment=PYTHONPATH=%h/wiki-os
+StandardOutput=journal
+StandardError=journal

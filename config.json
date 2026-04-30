@@ -1,0 +1,74 @@
+{
+  "_comment": "Wiki-OS configuration. Copy to ~/.config/wiki-os/config.json and edit.",
+
+  "wiki": {
+    "root": "~/wiki",
+    "dirs": {
+      "system": "system",
+      "user":   "user",
+      "meta":   "_meta",
+      "tmp":    "_tmp"
+    }
+  },
+
+  "ollama": {
+    "base_url":            "http://localhost:11434",
+    "model":               "mistral",
+    "context_limit_bytes": 8000,
+    "temperature":         0.2,
+    "num_ctx":             4096,
+    "timeout_seconds":     30
+  },
+
+  "monitor": {
+    "backend":          "inotify",
+    "debounce_seconds": 5,
+    "watch_dirs": [
+      "~/wiki",
+      "~/notes"
+    ],
+    "etc_allowlist": [
+      "/etc/pacman.conf",
+      "/etc/fstab",
+      "/etc/hosts",
+      "/etc/hostname",
+      "/etc/locale.conf",
+      "/etc/vconsole.conf",
+      "/etc/ssh/sshd_config",
+      "/etc/makepkg.conf",
+      "/etc/mkinitcpio.conf",
+      "/etc/systemd/system"
+    ],
+    "extensions": [
+      ".md", ".txt", ".conf", ".service",
+      ".timer", ".toml", ".yaml", ".ini",
+      ".env", ".sh"
+    ],
+    "ignore_dirs": [
+      ".git", "_tmp", ".obsidian", "__pycache__"
+    ]
+  },
+
+  "git": {
+    "auto_commit":             true,
+    "commit_interval_minutes": 5,
+    "remote":                  "",
+    "branch":                  "main"
+  },
+
+  "search": {
+    "max_snippets":        10,
+    "snippet_context_lines": 2
+  },
+
+  "tools": {
+    "tui_viewer": "mdt",
+    "renderer":   "glow",
+    "editor":     "nvim"
+  },
+
+  "logging": {
+    "level": "INFO",
+    "file":  "~/wiki/_meta/daemon.log"
+  }
+}

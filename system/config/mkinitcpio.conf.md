@@ -1,7 +1,7 @@
 ---
 title: mkinitcpio.conf
 source: /etc/mkinitcpio.conf
-updated: 2026-04-30T21:36:53.108915+00:00
+updated: 2026-04-30T21:55:31.843925+00:00
 tags: [system, config]
 ---
 

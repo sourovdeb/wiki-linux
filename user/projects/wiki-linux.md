@@ -1,7 +1,7 @@
 ---
 title: Wiki-OS Project
-created: 2026-04-30T21:36:53.093888+00:00
-updated: 2026-04-30T21:36:53.093888+00:00
+created: 2026-04-30T21:55:31.832920+00:00
+updated: 2026-04-30T21:55:31.832920+00:00
 tags: [project, wiki-os]
 cssclasses: [wiki-space]
 ---
@@ -20,6 +20,8 @@ This page tracks the core Wiki-OS project that powers the local wiki layer.
 
 - `README.md`
 - `ARCHITECTURE.md`
+- `USER_GUIDE.md`
+- `WIKI_SCHEMA.md`
 - `AGENTS.md`
 - `src/`
 - `systemd/`
@@ -37,4 +39,5 @@ systemctl --user status wiki-monitor.service --no-pager
 
 - This project remains user-space only.
 - `/etc` stays canonical.
-- The vault is the interface; the OS is not rewritten into markdown.
+- `~/wiki-sources` stays immutable.
+- The vault is the maintained artifact between the human and raw sources.

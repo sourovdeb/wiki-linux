@@ -1,7 +1,7 @@
 ---
 title: locale.conf
 source: /etc/locale.conf
-updated: 2026-04-30T21:36:53.102564+00:00
+updated: 2026-04-30T21:55:31.838413+00:00
 tags: [system, config]
 ---
 

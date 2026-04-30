@@ -1,7 +1,7 @@
 ---
 title: System Space
-created: 2026-04-30T21:36:53.093487+00:00
-updated: 2026-04-30T21:36:53.093487+00:00
+created: 2026-04-30T21:55:31.832513+00:00
+updated: 2026-04-30T21:55:31.832513+00:00
 tags: [system, root]
 cssclasses: [wiki-space]
 ---
@@ -14,7 +14,6 @@ This space holds system mirrors and operating documentation for the machine.
 
 - `/home/sourov/wiki`
 - `/home/sourov/notes`
-- `/home/sourov/wiki`
 - `/home/sourov/Documents/wiki-linux`
 
 ## Mirrored Sources

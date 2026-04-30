@@ -1,7 +1,7 @@
 ---
 title: sshd_config
 source: /etc/ssh/sshd_config
-updated: 2026-04-30T21:28:28.444722+00:00
+updated: 2026-04-30T21:32:57.283060+00:00
 tags: [system, config]
 ---
 

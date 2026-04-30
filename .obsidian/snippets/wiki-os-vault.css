@@ -1,0 +1,38 @@
+.wiki-index h1,
+.wiki-space h1 {
+    letter-spacing: -0.03em;
+    font-weight: 700;
+}
+
+.wiki-index table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+}
+
+.wiki-index th,
+.wiki-index td {
+    padding: 0.8rem 1rem;
+}
+
+.wiki-index blockquote,
+.wiki-space blockquote {
+    border-left: 3px solid #8a8a8a;
+    background: rgba(127, 127, 127, 0.08);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+}
+
+.wiki-index code,
+.wiki-space code {
+    border-radius: 8px;
+    padding: 0.15rem 0.35rem;
+}
+
+.wiki-index ul li,
+.wiki-space ul li {
+    margin: 0.35rem 0;
+}

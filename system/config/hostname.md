@@ -1,7 +1,7 @@
 ---
 title: hostname
 source: /etc/hostname
-updated: 2026-04-30T21:28:28.433908+00:00
+updated: 2026-04-30T21:32:57.278586+00:00
 tags: [system, config]
 ---
 

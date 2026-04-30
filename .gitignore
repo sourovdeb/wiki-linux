@@ -1,3 +1,4 @@
 _tmp/
 *.log
-.obsidian/
+.obsidian/workspace.json
+.obsidian/workspaces.json

@@ -1,7 +1,7 @@
 ---
 title: Wiki-OS Project
-created: 2026-04-30T21:28:28.419054+00:00
-updated: 2026-04-30T21:28:28.419054+00:00
+created: 2026-04-30T21:32:57.274265+00:00
+updated: 2026-04-30T21:32:57.274265+00:00
 tags: [project, wiki-os]
 cssclasses: [wiki-space]
 ---
@@ -11,9 +11,10 @@ cssclasses: [wiki-space]
 
 This page tracks the core Wiki-OS project that powers the local wiki layer.
 
-## Path
+## Paths
 
-- `/home/sourov/Documents/wiki-linux/wiki-linux`
+- Workspace root: `/home/sourov/Documents/wiki-linux`
+- Repo root: `/home/sourov/Documents/wiki-linux/wiki-linux`
 
 ## Important Files
 

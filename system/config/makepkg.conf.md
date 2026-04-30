@@ -1,7 +1,7 @@
 ---
 title: makepkg.conf
 source: /etc/makepkg.conf
-updated: 2026-04-30T21:28:28.448604+00:00
+updated: 2026-04-30T21:32:57.284158+00:00
 tags: [system, config]
 ---
 

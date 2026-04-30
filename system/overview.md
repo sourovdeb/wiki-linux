@@ -1,7 +1,7 @@
 ---
 title: System Overview
-created: 2026-04-30T21:28:28.418222+00:00
-updated: 2026-04-30T21:28:28.418222+00:00
+created: 2026-04-30T21:32:57.274018+00:00
+updated: 2026-04-30T21:32:57.274018+00:00
 tags: [system, overview]
 ---
 
@@ -27,6 +27,8 @@ This page is the top-level operating snapshot for the current machine.
 
 - `/home/sourov/wiki`
 - `/home/sourov/notes`
+- `/home/sourov/wiki`
+- `/home/sourov/Documents/wiki-linux`
 
 
 ## Commands

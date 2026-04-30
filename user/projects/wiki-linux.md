@@ -1,7 +1,7 @@
 ---
 title: Wiki-OS Project
-created: 2026-04-30T21:32:57.274265+00:00
-updated: 2026-04-30T21:32:57.274265+00:00
+created: 2026-04-30T21:36:53.093888+00:00
+updated: 2026-04-30T21:36:53.093888+00:00
 tags: [project, wiki-os]
 cssclasses: [wiki-space]
 ---
@@ -19,6 +19,7 @@ This page tracks the core Wiki-OS project that powers the local wiki layer.
 ## Important Files
 
 - `README.md`
+- `ARCHITECTURE.md`
 - `AGENTS.md`
 - `src/`
 - `systemd/`

@@ -1,7 +1,7 @@
 ---
 title: fstab
 source: /etc/fstab
-updated: 2026-04-30T21:32:57.276262+00:00
+updated: 2026-04-30T21:36:53.097338+00:00
 tags: [system, config]
 ---
 

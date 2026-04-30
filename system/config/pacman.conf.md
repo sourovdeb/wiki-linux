@@ -1,7 +1,7 @@
 ---
 title: pacman.conf
 source: /etc/pacman.conf
-updated: 2026-04-30T21:32:57.274381+00:00
+updated: 2026-04-30T21:36:53.094055+00:00
 tags: [system, config]
 ---
 

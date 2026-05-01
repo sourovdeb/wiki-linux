@@ -1,11 +1,11 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 19:46 UTC
+updated: 2026-05-01 19:52 UTC
 ---
 
 # Wiki Index
 
-*48 pages — last rebuilt 2026-05-01 19:46 UTC*
+*49 pages — last rebuilt 2026-05-01 19:52 UTC*
 
 ## Bmo
 
@@ -65,6 +65,7 @@ updated: 2026-05-01 19:46 UTC
 
 ## User
 
+- [[user/copilot/copilot-custom-prompts/Generate table of contents|Generate Table Of Contents]]
 - [[user/notes/README|Notes]]  `space`
 - [[user/notes|Notes]]  `space`
 - [[user/projects/README|Projects]]  `space`

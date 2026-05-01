@@ -24,7 +24,7 @@
   "githubCopilotToken": "",
   "githubCopilotTokenExpiresAt": 0,
   "defaultChainType": "llm_chain",
-  "defaultModelKey": "google/gemini-2.5-flash|openrouterai",
+  "defaultModelKey": "mistral|ollama",
   "embeddingModelKey": "openai/text-embedding-3-small|openrouterai",
   "temperature": 0.1,
   "maxTokens": 6000,
@@ -95,6 +95,21 @@
       "capabilities": [
         "vision"
       ]
+    },
+    {
+      "name": "mistral",
+      "provider": "ollama",
+      "enabled": true,
+      "isBuiltIn": false,
+      "baseUrl": "",
+      "apiKey": "",
+      "isEmbeddingModel": false,
+      "capabilities": [
+        "reasoning",
+        "websearch"
+      ],
+      "stream": true,
+      "displayName": ""
     },
     {
       "name": "claude-sonnet-4-6",
@@ -294,21 +309,6 @@
       "capabilities": [
         "reasoning"
       ]
-    },
-    {
-      "name": "mistral",
-      "provider": "ollama",
-      "enabled": true,
-      "isBuiltIn": false,
-      "baseUrl": "",
-      "apiKey": "",
-      "isEmbeddingModel": false,
-      "capabilities": [
-        "websearch",
-        "reasoning"
-      ],
-      "stream": true,
-      "displayName": ""
     }
   ],
   "activeEmbeddingModels": [

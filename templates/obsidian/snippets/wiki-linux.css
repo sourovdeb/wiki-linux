@@ -1,0 +1,53 @@
+/*
+ * wiki-linux.css — Custom styles for the wiki-linux Obsidian vault.
+ *
+ * Goals:
+ *   1. Highlight links to Arch Wiki cached pages distinctly (blue-ish,
+ *      with an 🅰 badge so they are instantly recognisable as Arch Wiki).
+ *   2. Style the _meta/ files (index, recent, log) with a muted accent
+ *      so they read as "system" rather than "user" content.
+ *   3. Minimal visual chrome — no coloured sidebars, no heavy shadows.
+ */
+
+/* ── Arch Wiki link badge ────────────────────────────────────────────────── */
+/* Internal links whose path includes "archwiki" get a subtle badge.         */
+.internal-link[href*="archwiki"],
+.cm-hmd-internal-link[data-href*="archwiki"] {
+  color: #7aa2f7;
+  text-decoration-style: dashed;
+}
+.internal-link[href*="archwiki"]::before {
+  content: "🅰 ";
+  font-size: 0.75em;
+  vertical-align: middle;
+}
+
+/* ── External Arch Wiki URLs ─────────────────────────────────────────────── */
+a[href*="wiki.archlinux.org"] {
+  color: #7aa2f7;
+}
+a[href*="wiki.archlinux.org"]::after {
+  content: " ↗";
+  font-size: 0.75em;
+}
+
+/* ── _meta/ system pages — muted heading colour ─────────────────────────── */
+.markdown-preview-view .internal-link[href^="_meta/"] {
+  color: #9ece6a;
+  opacity: 0.85;
+}
+
+/* ── System config pages (system/) — monospace file paths ───────────────── */
+.markdown-preview-view code {
+  font-family: "Fira Code", "Cascadia Code", "JetBrains Mono", monospace;
+  font-size: 0.88em;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+
+/* ── Frontmatter block — dim it so it doesn't dominate ──────────────────── */
+.metadata-container {
+  opacity: 0.6;
+  font-size: 0.85em;
+}

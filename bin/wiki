@@ -63,7 +63,12 @@ _usage() {
   _box_row "  ${GREEN}open${RESET} ${WHITE}[page]${RESET}        Open wiki in Obsidian or mdt" 62
   _box_row "  ${GREEN}search${RESET} ${WHITE}<query>${RESET}     Full-text ripgrep search" 62
   _box_row "  ${GREEN}ask${RESET} ${WHITE}\"<question>\"${RESET}  LLM Q&A from your wiki" 62
+  _box_row "  ${GREEN}fix${RESET} ${WHITE}\"<problem>\"${RESET}   LLM-assisted troubleshooting from wiki + Arch Wiki" 62
+  _box_row "  ${GREEN}archwiki${RESET} ${WHITE}<query>${RESET}    Fetch and cache an Arch Wiki page" 62
   _box_row "  ${GREEN}status${RESET}             Daemon + git + wiki overview" 62
+  _box_row "  ${GREEN}doctor${RESET}             Verify EXPECTATIONS safety guarantees" 62
+  _box_row "  ${GREEN}rescue${RESET}             Import stray docs from non-watched dirs" 62
+  _box_row "  ${GREEN}openwebui${RESET}          Launch Open WebUI (chat UI on localhost)" 62
   _box_row "  ${GREEN}sync${RESET}               Commit & push to git remote" 62
   _box_row "  ${GREEN}lint${RESET}               Check for broken wikilinks" 62
   _box_row "  ${GREEN}task${RESET} ${WHITE}\"<title>\"${RESET}    Log a task note to _meta/tasks/" 62
@@ -78,6 +83,8 @@ _usage() {
   _box_row "  ${DIM}wiki ingest ~/Downloads/arch-guide.txt${RESET}" 62
   _box_row "  ${DIM}wiki search \"GPU driver\"${RESET}" 62
   _box_row "  ${DIM}wiki ask \"What does my fstab mount at boot?\"${RESET}" 62
+  _box_row "  ${DIM}wiki fix \"wifi not connecting\"${RESET}" 62
+  _box_row "  ${DIM}wiki archwiki \"systemd-resolved\"${RESET}" 62
   _box_row "  ${DIM}wiki sync${RESET}" 62
   _box_row "" 62
   _box_bot 62
@@ -238,7 +245,39 @@ cmd_reprocess() {
   _ok "Reprocess complete"
 }
 
-# ── serve ─────────────────────────────────────────────────────────────────────
+# ── fix ───────────────────────────────────────────────────────────────────────
+cmd_fix() {
+  [[ $# -eq 0 ]] && { _err "Usage: wiki fix \"<problem description>\""; exit 1; }
+  local problem="$*"
+  printf '\n%s  Asking wiki + Arch Wiki for a fix:%s\n  %s"%s"%s\n\n' \
+    "$GREY" "$RESET" "$CYAN" "$problem" "$RESET"
+  $PYTHON -m src.fix "$problem"
+}
+
+# ── archwiki ──────────────────────────────────────────────────────────────────
+cmd_archwiki() {
+  [[ $# -eq 0 ]] && { _err "Usage: wiki archwiki <page-title>"; exit 1; }
+  local page="$*"
+  _info "Fetching Arch Wiki page: $page"
+  $PYTHON -m src.archwiki "$page"
+}
+
+# ── doctor ────────────────────────────────────────────────────────────────────
+cmd_doctor() {
+  exec "$SCRIPT_DIR/wiki-doctor" "$@"
+}
+
+# ── rescue ────────────────────────────────────────────────────────────────────
+cmd_rescue() {
+  exec "$SCRIPT_DIR/wiki-rescue" "$@"
+}
+
+# ── openwebui ─────────────────────────────────────────────────────────────────
+cmd_openwebui() {
+  exec "$SCRIPT_DIR/wiki-openwebui" "$@"
+}
+
+
 cmd_serve() {
   _info "Starting monitor in foreground (Ctrl-C to stop)..."
   $PYTHON -m src.monitor "${@}"
@@ -261,6 +300,11 @@ case "${1:-help}" in
   open)      shift; cmd_open      "$@";;
   search)    shift; cmd_search    "$@";;
   ask)       shift; cmd_ask       "$@";;
+  fix)       shift; cmd_fix       "$@";;
+  archwiki)  shift; cmd_archwiki  "$@";;
+  doctor)    shift; cmd_doctor    "$@";;
+  rescue)    shift; cmd_rescue    "$@";;
+  openwebui) shift; cmd_openwebui "$@";;
   status)          cmd_status        ;;
   sync)            cmd_sync          ;;
   lint)            cmd_lint          ;;

@@ -1,0 +1,24 @@
+#!/bin/bash
+# Simple brightness control script
+
+MAX_BRIGHTNESS=$(cat /sys/class/backlight/intel_backlight/max_brightness)
+CURRENT=$(cat /sys/class/backlight/intel_backlight/brightness)
+
+case "$1" in
+    up)
+        NEW=$((CURRENT + MAX_BRIGHTNESS/10))
+        [[ $NEW -gt $MAX_BRIGHTNESS ]] && NEW=$MAX_BRIGHTNESS
+        ;;
+    down)
+        NEW=$((CURRENT - MAX_BRIGHTNESS/10))
+        [[ $NEW -lt 0 ]] && NEW=0
+        ;;
+    *)
+        echo "Usage: brightness {up|down}"
+        echo "Current brightness: $((CURRENT * 100 / MAX_BRIGHTNESS))%"
+        exit 1
+        ;;
+esac
+
+echo $NEW | sudo tee /sys/class/backlight/intel_backlight/brightness
+echo "Brightness set to $((NEW * 100 / MAX_BRIGHTNESS))%"

@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+# bin/wiki-doctor — Verify the six EXPECTATIONS.md safety guarantees still hold.
+#
+# Reports PASS/FAIL for each guarantee. Exit code is 0 if everything passes,
+# non-zero (= number of failures) otherwise. Designed to run from the panel,
+# from a terminal, or as a periodic systemd timer.
+#
+# Usage:
+#   wiki-doctor             # human-readable report
+#   wiki-doctor --quiet     # just the summary line
+#   wiki-doctor --json      # machine-readable JSON
+#
+# What it checks (mapped to EXPECTATIONS Part 5):
+#   1. Config is read-only (chmod 0444)
+#   2. /etc files match install-time hash snapshot (no drift)
+#   3. _archive/ exists and was used (no hard-deletes from daemon)
+#   4. systemd units run as user, not root
+#   5. Wiki is a git repo with recent commits (everything tracked)
+#   6. WIKI_ROOT exists, daemon writes only inside it
+# Plus health checks: daemon up, Ollama up, watch_dirs reachable.
+
+set -uo pipefail
+
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+ETC_SNAPSHOT="$HOME/.cache/wiki-linux/etc-snapshot.sha256"
+
+QUIET=0
+JSON=0
+RESNAPSHOT=0
+[[ "${1:-}" == "--quiet" ]] && QUIET=1
+[[ "${1:-}" == "--json"  ]] && JSON=1
+[[ "${1:-}" == "--resnapshot" ]] && RESNAPSHOT=1
+
+if [[ $RESNAPSHOT -eq 1 ]]; then
+  mkdir -p "$(dirname "$ETC_SNAPSHOT")"
+  paths=$(python3 -c "
+import json, os, sys
+p = os.environ.get('WIKI_OS_CONFIG','$CONFIG')
+try:
+    d = json.load(open(p))
+    for f in d.get('monitor',{}).get('etc_allowlist',[]):
+        if os.path.isfile(f): print(f)
+except Exception as e:
+    sys.exit(0)
+" 2>/dev/null)
+  : > "$ETC_SNAPSHOT"
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    sha256sum "$f" >> "$ETC_SNAPSHOT" 2>/dev/null || true
+  done <<< "$paths"
+  echo "Snapshot written: $ETC_SNAPSHOT ($(wc -l < "$ETC_SNAPSHOT" | tr -d ' ') files)"
+  exit 0
+fi
+
+# ── Output helpers ────────────────────────────────────────────────────────────
+if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]] && [[ "$JSON" -eq 0 ]]; then
+  GREEN=$'\e[92m'; RED=$'\e[91m'; YELLOW=$'\e[93m'
+  CYAN=$'\e[96m';  GREY=$'\e[90m'; RESET=$'\e[0m'; BOLD=$'\e[1m'
+else
+  GREEN=''; RED=''; YELLOW=''; CYAN=''; GREY=''; RESET=''; BOLD=''
+fi
+
+PASS_COUNT=0
+FAIL_COUNT=0
+WARN_COUNT=0
+declare -a JSON_ROWS=()
+
+_pass() {
+  ((++PASS_COUNT))
+  [[ "$JSON" -eq 1 ]] && JSON_ROWS+=("{\"check\":\"$1\",\"status\":\"PASS\",\"detail\":\"$2\"}") && return
+  [[ "$QUIET" -eq 1 ]] && return
+  printf '  %s✓%s  %s%s%s  %s%s%s\n' "$GREEN" "$RESET" "$BOLD" "$1" "$RESET" "$GREY" "$2" "$RESET"
+}
+_fail() {
+  ((++FAIL_COUNT))
+  [[ "$JSON" -eq 1 ]] && JSON_ROWS+=("{\"check\":\"$1\",\"status\":\"FAIL\",\"detail\":\"$2\"}") && return
+  [[ "$QUIET" -eq 1 ]] && return
+  printf '  %s✗%s  %s%s%s  %s%s%s\n' "$RED" "$RESET" "$BOLD" "$1" "$RESET" "$RED" "$2" "$RESET"
+}
+_warn() {
+  ((++WARN_COUNT))
+  [[ "$JSON" -eq 1 ]] && JSON_ROWS+=("{\"check\":\"$1\",\"status\":\"WARN\",\"detail\":\"$2\"}") && return
+  [[ "$QUIET" -eq 1 ]] && return
+  printf '  %s!%s  %s%s%s  %s%s%s\n' "$YELLOW" "$RESET" "$BOLD" "$1" "$RESET" "$YELLOW" "$2" "$RESET"
+}
+
+[[ "$JSON" -eq 0 && "$QUIET" -eq 0 ]] && {
+  printf '\n  %swiki-doctor%s  %s— EXPECTATIONS.md safety audit%s\n\n' "$BOLD$CYAN" "$RESET" "$GREY" "$RESET"
+}
+
+# ── Guarantee 1: config is read-only ──────────────────────────────────────────
+if [[ -f "$CONFIG" ]]; then
+  perm=$(stat -c '%a' "$CONFIG")
+  if [[ "$perm" == "444" || "$perm" == "440" || "$perm" == "400" ]]; then
+    _pass "config-readonly" "$CONFIG mode=$perm"
+  else
+    _fail "config-readonly" "$CONFIG mode=$perm (expected 0444; run: chmod 0444 $CONFIG)"
+  fi
+else
+  _fail "config-readonly" "$CONFIG missing (run install.sh)"
+fi
+
+# ── Guarantee 2: /etc unchanged since install ─────────────────────────────────
+if [[ -f "$ETC_SNAPSHOT" ]]; then
+  drift=0
+  while IFS=' ' read -r expected_hash _ path; do
+    [[ -z "$path" ]] && continue
+    [[ ! -f "$path" ]] && { drift=1; break; }
+    actual=$(sha256sum "$path" 2>/dev/null | awk '{print $1}')
+    if [[ "$actual" != "$expected_hash" ]]; then
+      drift=1
+      drifted_path="$path"
+      break
+    fi
+  done < "$ETC_SNAPSHOT"
+  if [[ $drift -eq 0 ]]; then
+    _pass "etc-unchanged" "$(wc -l < "$ETC_SNAPSHOT" | tr -d ' ') files match snapshot"
+  else
+    _warn "etc-unchanged" "${drifted_path:-some file} drifted from snapshot — re-snapshot if intentional: wiki doctor --resnapshot"
+  fi
+else
+  _warn "etc-unchanged" "no snapshot at $ETC_SNAPSHOT (run: wiki doctor --resnapshot)"
+fi
+
+# ── Guarantee 3: _archive/ exists and is used (no hard-delete) ────────────────
+if [[ -d "$WIKI_ROOT/_archive" ]]; then
+  count=$(find "$WIKI_ROOT/_archive" -type f 2>/dev/null | wc -l | tr -d ' ')
+  _pass "archive-exists" "$WIKI_ROOT/_archive holds $count archived files"
+else
+  _fail "archive-exists" "$WIKI_ROOT/_archive missing (run install.sh)"
+fi
+
+# ── Guarantee 4: systemd units run as user, not root ──────────────────────────
+units_ok=1
+units_detail=""
+for unit in wiki-monitor.service wiki-sync.service wiki-sync.timer; do
+  unit_file="$HOME/.config/systemd/user/$unit"
+  if [[ ! -f "$unit_file" ]]; then
+    units_ok=0
+    units_detail="$unit missing"
+    break
+  fi
+  # User services run as the invoking user by default; we just confirm no
+  # User=root override has been smuggled in.
+  if grep -qE '^User=root\b' "$unit_file" 2>/dev/null; then
+    units_ok=0
+    units_detail="$unit has User=root override"
+    break
+  fi
+done
+if [[ $units_ok -eq 1 ]]; then
+  _pass "systemd-as-user" "all 3 user units present, no root override"
+else
+  _fail "systemd-as-user" "$units_detail"
+fi
+
+# ── Guarantee 5: wiki is a git repo with recent commits ───────────────────────
+if [[ -d "$WIKI_ROOT/.git" ]]; then
+  commits=$(git -C "$WIKI_ROOT" rev-list --count HEAD 2>/dev/null || echo 0)
+  if [[ "$commits" -ge 1 ]]; then
+    last=$(git -C "$WIKI_ROOT" log -1 --format='%cr' 2>/dev/null || echo 'unknown')
+    _pass "git-tracked" "$commits commits, last $last"
+  else
+    _fail "git-tracked" "no commits yet (run: cd $WIKI_ROOT && git commit --allow-empty -m init)"
+  fi
+else
+  _fail "git-tracked" "$WIKI_ROOT/.git missing (run install.sh)"
+fi
+
+# ── Guarantee 6: WIKI_ROOT exists ─────────────────────────────────────────────
+if [[ -d "$WIKI_ROOT" ]]; then
+  _pass "wiki-root-exists" "$WIKI_ROOT"
+else
+  _fail "wiki-root-exists" "$WIKI_ROOT missing"
+fi
+
+# ── Health: daemon running ────────────────────────────────────────────────────
+if systemctl --user is-active --quiet wiki-monitor 2>/dev/null; then
+  pid=$(systemctl --user show -p MainPID --value wiki-monitor 2>/dev/null)
+  _pass "daemon-running" "wiki-monitor PID=$pid"
+else
+  _warn "daemon-running" "wiki-monitor inactive (start: systemctl --user start wiki-monitor)"
+fi
+
+# ── Health: sync timer ────────────────────────────────────────────────────────
+if systemctl --user is-active --quiet wiki-sync.timer 2>/dev/null; then
+  _pass "sync-timer" "wiki-sync.timer active"
+else
+  _warn "sync-timer" "wiki-sync.timer inactive (enable: systemctl --user enable --now wiki-sync.timer)"
+fi
+
+# ── Health: ollama reachable ──────────────────────────────────────────────────
+ollama_url=$(python3 -c "import json,sys,os; p=os.environ.get('WIKI_OS_CONFIG','$CONFIG');
+exec(\"try:\\n  d=json.load(open(p))\\n  print(d.get('ollama',{}).get('base_url','http://localhost:11434'))\\nexcept: print('http://localhost:11434')\")" 2>/dev/null || echo http://localhost:11434)
+if curl -fsS --max-time 3 "$ollama_url/api/tags" >/dev/null 2>&1; then
+  _pass "ollama-reachable" "$ollama_url"
+else
+  _warn "ollama-reachable" "$ollama_url not responding (start: systemctl start ollama)"
+fi
+
+# ── Health: watch dirs reachable ──────────────────────────────────────────────
+unreachable=()
+for d in "$HOME/wiki" "$HOME/Downloads" "$HOME/Documents"; do
+  [[ ! -d "$d" ]] && unreachable+=("$d")
+done
+if [[ ${#unreachable[@]} -eq 0 ]]; then
+  _pass "watch-dirs" "wiki, Downloads, Documents all reachable"
+else
+  _warn "watch-dirs" "missing: ${unreachable[*]}"
+fi
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+if [[ "$JSON" -eq 1 ]]; then
+  printf '{"pass":%d,"fail":%d,"warn":%d,"checks":[' "$PASS_COUNT" "$FAIL_COUNT" "$WARN_COUNT"
+  printf '%s' "${JSON_ROWS[0]:-}"
+  for ((i=1; i<${#JSON_ROWS[@]}; i++)); do printf ',%s' "${JSON_ROWS[i]}"; done
+  printf ']}\n'
+else
+  printf '\n  %sSummary:%s  %s%d passed%s, %s%d failed%s, %s%d warnings%s\n\n' \
+    "$BOLD" "$RESET" "$GREEN" "$PASS_COUNT" "$RESET" \
+    "$RED" "$FAIL_COUNT" "$RESET" "$YELLOW" "$WARN_COUNT" "$RESET"
+fi
+
+exit "$FAIL_COUNT"

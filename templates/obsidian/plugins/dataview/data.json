@@ -1,0 +1,16 @@
+{
+  "renderNullAs": "\\-",
+  "warnOnEmptyResult": true,
+  "refreshInterval": 2500,
+  "tableIdColumnName": "File",
+  "showResultCount": true,
+  "allowHtml": false,
+  "inlineQueryPrefix": "=",
+  "inlineJsQueryPrefix": "$=",
+  "enableInlineDataview": true,
+  "enableDataviewJs": false,
+  "enableInlineDataviewJs": false,
+  "prettyRenderInlineFields": true,
+  "dataviewJsTimeout": 20000,
+  "recursiveSubTaskCompletion": false
+}

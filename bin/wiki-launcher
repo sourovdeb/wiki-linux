@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+# bin/wiki-launcher — Android-style grid launcher for wiki-linux.
+#
+# Shows a panel of buttons for every wiki command. Uses yad (preferred)
+# for a true icon grid, falling back to zenity --list on systems that
+# don't have yad installed.
+#
+# Install: the installer symlinks this to ~/.local/bin/wiki-launcher and
+# adds wiki-launcher.desktop to ~/.config/autostart (or a panel shortcut).
+#
+# Environment variables honoured:
+#   WIKI_ROOT     — override the wiki directory (default: ~/wiki)
+#   WIKI_LAUNCHER_GEOMETRY — e.g. "560x600+0+0" for yad window placement
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+WIKI_BIN="${WIKI_BIN:-$HOME/.local/bin/wiki}"
+TERM_EXEC="${TERM_EXEC:-}"
+
+# ── Detect a working terminal emulator ───────────────────────────────────────
+_find_term() {
+  for t in kitty alacritty foot wezterm gnome-terminal xfce4-terminal xterm; do
+    if command -v "$t" &>/dev/null; then
+      echo "$t"; return
+    fi
+  done
+  echo ""
+}
+
+TERM_EXEC="${TERM_EXEC:-$(_find_term)}"
+
+# ── Run a wiki command in a terminal ─────────────────────────────────────────
+_wiki_in_term() {
+  local cmd="$1"
+  if [[ -z "$TERM_EXEC" ]]; then
+    notify-send "wiki-launcher" "No terminal emulator found. Install kitty or alacritty." 2>/dev/null || true
+    return
+  fi
+  case "$TERM_EXEC" in
+    kitty)          kitty -- bash -ic "WIKI_ROOT='$WIKI_ROOT' $WIKI_BIN $cmd; read -rp 'Press Enter to close...'" & ;;
+    alacritty)      alacritty -e bash -ic "WIKI_ROOT='$WIKI_ROOT' $WIKI_BIN $cmd; read -rp 'Press Enter to close...'" & ;;
+    foot)           foot bash -ic "WIKI_ROOT='$WIKI_ROOT' $WIKI_BIN $cmd; read -rp 'Press Enter to close...'" & ;;
+    wezterm)        wezterm start -- bash -ic "WIKI_ROOT='$WIKI_ROOT' $WIKI_BIN $cmd; read -rp 'Press Enter to close...'" & ;;
+    gnome-terminal) gnome-terminal -- bash -ic "WIKI_ROOT='$WIKI_ROOT' $WIKI_BIN $cmd; read -rp 'Press Enter to close...'" & ;;
+    xfce4-terminal) xfce4-terminal -e "bash -ic 'WIKI_ROOT=\"$WIKI_ROOT\" $WIKI_BIN $cmd; read -rp \"Press Enter...\"'" & ;;
+    xterm)          xterm -e "bash -ic 'WIKI_ROOT=\"$WIKI_ROOT\" $WIKI_BIN $cmd; read -rp \"Press Enter...\"'" & ;;
+    *)              "$TERM_EXEC" -- bash -ic "WIKI_ROOT='$WIKI_ROOT' $WIKI_BIN $cmd; read -rp 'Press Enter to close...'" & ;;
+  esac
+}
+
+# ── Gather live stats for the header ─────────────────────────────────────────
+page_count=$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+daemon_pid=$(systemctl --user show wiki-monitor.service --property=MainPID --value 2>/dev/null || echo 0)
+[[ "${daemon_pid:-0}" -gt 0 ]] \
+  && daemon_status="● Running (PID $daemon_pid)" \
+  || daemon_status="○ Stopped"
+
+# ── YAD launcher (preferred) ──────────────────────────────────────────────────
+if command -v yad &>/dev/null; then
+  GEOM="${WIKI_LAUNCHER_GEOMETRY:-560x640}"
+
+  # Build a yad icon-view launcher grid.
+  # Each item: "Label|icon-name|command-key"
+  # We capture the chosen key and dispatch below.
+  CHOICE=$(yad \
+    --title="wiki-linux — ${page_count} pages | ${daemon_status}" \
+    --width=560 --height=640 \
+    --no-buttons \
+    --icons-view \
+    --item-width=120 \
+    --read-dir \
+    --text="<b>wiki-linux launcher</b>  ·  ${page_count} pages  ·  ${daemon_status}" \
+    --column="" \
+    2>/dev/null <<'ITEMS'
+Ask LLM|gtk-dialog-question|ask
+New Page|gtk-new|new
+Ingest File|gtk-open|ingest
+Search Wiki|gtk-find|search
+Open Obsidian|accessories-text-editor|open
+Open WebUI|web-browser|openwebui
+Fix Problem|gtk-dialog-warning|fix
+Arch Wiki|gtk-help|archwiki
+Rescue Stray|gtk-rescue|rescue
+Doctor (safety)|emblem-default|doctor
+Sync (git push)|gtk-redo|sync
+Lint (check links)|gtk-spell-check|lint
+Daemon Status|utilities-system-monitor|status
+Serve (foreground)|gtk-execute|serve
+Config|gtk-preferences|config
+ITEMS
+  ) || true
+
+  if [[ -n "$CHOICE" ]]; then
+    key="${CHOICE%%|*}"
+    case "${key,,}" in
+      "ask llm")       _wiki_in_term "ask" ;;
+      "new page")      _wiki_in_term "new" ;;
+      "ingest file")
+        file=$(yad --file-selection --title="Select file to ingest" 2>/dev/null) \
+          && [[ -n "$file" ]] && _wiki_in_term "ingest '$file'" ;;
+      "search wiki")
+        query=$(yad --entry --title="Search wiki" --text="Enter search query:" 2>/dev/null) \
+          && [[ -n "$query" ]] && _wiki_in_term "search '$query'" ;;
+      "open obsidian") _wiki_in_term "open" ;;
+      "open webui")    _wiki_in_term "openwebui" ;;
+      "rescue stray")  _wiki_in_term "rescue" ;;
+      "doctor (safety)") _wiki_in_term "doctor" ;;
+      "fix problem")
+        problem=$(yad --entry --title="Describe your problem" \
+          --text="What are you trying to fix?" 2>/dev/null) \
+          && [[ -n "$problem" ]] && _wiki_in_term "fix '$problem'" ;;
+      "arch wiki")
+        page=$(yad --entry --title="Arch Wiki" \
+          --text="Enter Arch Wiki page title:" 2>/dev/null) \
+          && [[ -n "$page" ]] && _wiki_in_term "archwiki '$page'" ;;
+      "sync (git push)")  _wiki_in_term "sync"   ;;
+      "lint (check links)") _wiki_in_term "lint" ;;
+      "daemon status")   _wiki_in_term "status"  ;;
+      "serve (foreground)") _wiki_in_term "serve" ;;
+      "config")          _wiki_in_term "config"  ;;
+    esac
+  fi
+  exit 0
+fi
+
+# ── Zenity fallback (grid via --list) ─────────────────────────────────────────
+if command -v zenity &>/dev/null; then
+  CHOICE=$(zenity --list \
+    --title="wiki-linux — ${page_count} pages" \
+    --width=440 --height=540 \
+    --text="<b>wiki-linux launcher</b>  (${daemon_status})" \
+    --column="Command" --column="Description" \
+    "ask"       "LLM Q&A from your wiki" \
+    "new"       "Create a new wiki page" \
+    "ingest"    "Ingest a file into the wiki via LLM" \
+    "search"    "Full-text ripgrep search" \
+    "open"      "Open wiki in Obsidian" \
+    "openwebui" "Launch Open WebUI chat interface (localhost)" \
+    "fix"       "LLM-assisted troubleshooting" \
+    "archwiki"  "Fetch and cache an Arch Wiki page" \
+    "rescue"    "Import stray docs from non-watched dirs" \
+    "doctor"    "Verify EXPECTATIONS safety guarantees" \
+    "sync"      "Commit & push to git remote" \
+    "lint"      "Check for broken wikilinks" \
+    "status"    "Daemon + git + wiki overview" \
+    "serve"     "Run monitor in foreground (debug)" \
+    "config"    "Show resolved configuration" \
+    2>/dev/null) || true
+
+  if [[ -z "$CHOICE" ]]; then
+    exit 0
+  fi
+
+  case "$CHOICE" in
+    ask)
+      question=$(zenity --entry --title="Ask the wiki" \
+        --text="What would you like to ask?" 2>/dev/null) \
+        && [[ -n "$question" ]] && _wiki_in_term "ask \"$question\""
+      ;;
+    new)
+      title=$(zenity --entry --title="New wiki page" \
+        --text="Page title:" 2>/dev/null) \
+        && [[ -n "$title" ]] && _wiki_in_term "new \"$title\""
+      ;;
+    ingest)
+      file=$(zenity --file-selection --title="Select file to ingest" 2>/dev/null) \
+        && [[ -n "$file" ]] && _wiki_in_term "ingest \"$file\""
+      ;;
+    search)
+      query=$(zenity --entry --title="Search wiki" \
+        --text="Search query:" 2>/dev/null) \
+        && [[ -n "$query" ]] && _wiki_in_term "search \"$query\""
+      ;;
+    fix)
+      problem=$(zenity --entry --title="Describe your problem" \
+        --text="What are you trying to fix?" 2>/dev/null) \
+        && [[ -n "$problem" ]] && _wiki_in_term "fix \"$problem\""
+      ;;
+    archwiki)
+      page=$(zenity --entry --title="Arch Wiki" \
+        --text="Page title:" 2>/dev/null) \
+        && [[ -n "$page" ]] && _wiki_in_term "archwiki \"$page\""
+      ;;
+    *)
+      _wiki_in_term "$CHOICE"
+      ;;
+  esac
+  exit 0
+fi
+
+# ── No GUI available — print a terminal menu ─────────────────────────────────
+echo ""
+echo "  wiki-linux launcher (${page_count} pages)"
+echo "  ${daemon_status}"
+echo ""
+echo "  No yad or zenity found. Run one of:"
+echo ""
+for cmd in ask new ingest search open fix archwiki sync lint status; do
+  echo "    wiki ${cmd}"
+done
+echo ""
+echo "  Install yad for the graphical launcher:  sudo pacman -S yad"

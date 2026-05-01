@@ -4,10 +4,12 @@
   "wiki": {
     "root": "~/wiki",
     "dirs": {
-      "system": "system",
-      "user":   "user",
-      "meta":   "_meta",
-      "tmp":    "_tmp"
+      "system":  "system",
+      "user":    "user",
+      "raw":     "raw",
+      "meta":    "_meta",
+      "tmp":     "_tmp",
+      "archive": "_archive"
     }
   },
 
@@ -68,6 +70,52 @@
     "tui_viewer": "mdt",
     "renderer":   "glow",
     "editor":     "nvim"
+  },
+
+  "fix": {
+    "doc_roots": [
+      "~/wiki",
+      "~/.cache/wiki-linux/archwiki"
+    ],
+    "max_snippets":  8,
+    "snippet_bytes": 2000
+  },
+
+  "obsidian": {
+    "vault_path":    "~/wiki",
+    "config_dir":    "~/.config/obsidian",
+    "plugins": [
+      "obsidian-git",
+      "dataview",
+      "templater-obsidian",
+      "bmo-chatbot"
+    ]
+  },
+
+  "openwebui": {
+    "host":          "127.0.0.1",
+    "port":          8080,
+    "data_dir":      "~/.local/share/wiki-linux/openwebui-data",
+    "venv":          "~/.local/share/wiki-linux/openwebui-venv",
+    "knowledge_dir": "~/wiki",
+    "auto_start":    false
+  },
+
+  "rescue": {
+    "scan_dirs": [
+      "~/Pictures",
+      "~/Videos",
+      "~/Music",
+      "~/Public",
+      "~/Templates",
+      "~/Desktop"
+    ],
+    "extensions": [".md", ".txt", ".pdf", ".org", ".rst"],
+    "ignore_dirs": [".cache", ".thumbnails", ".trash", "pytest-of-sourov", ".git", "node_modules", "__pycache__"]
+  },
+
+  "doctor": {
+    "etc_snapshot": "~/.cache/wiki-linux/etc-snapshot.sha256"
   },
 
   "logging": {

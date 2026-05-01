@@ -1,0 +1,272 @@
+#!/usr/bin/env bash
+# bin/wiki-openwebui — Bootstrap and run Open WebUI as the wiki's main UI.
+#
+# Open WebUI is the project's primary chat front-end:
+#   - talks to local Ollama (no cloud)
+#   - mounts ~/wiki as a knowledge folder (RAG over the user's notes)
+#   - runs as a systemd user service on login (after `enable` flag)
+#
+# This script handles three modes:
+#   wiki-openwebui            # start the server, open browser, foreground
+#   wiki-openwebui --start    # start in background and exit
+#   wiki-openwebui --stop     # stop the background server
+#   wiki-openwebui --status   # report whether it is running and on what port
+#   wiki-openwebui --install  # pip-install Open WebUI into the dedicated venv
+#   wiki-openwebui --enable   # add a systemd user service so it starts on login
+#   wiki-openwebui --disable  # remove the service
+#
+# Why a dedicated venv at ~/.local/share/wiki-linux/openwebui-venv :
+#   pip-installed Open WebUI is large (~500 MB) and pulls many dependencies.
+#   We keep it out of the wiki-linux project venv so the daemon stays light.
+#
+# Why we don't use /usr/bin/open-webui (open-webui-desktop-bin):
+#   That Arch package is the Electron client only. It bundles no Python
+#   server, and on this system the wrapper crashes with
+#       "Cannot find module 'electron'"
+#   so it cannot serve as a chat UI at all. The pip server is the
+#   canonical, working distribution.
+
+set -uo pipefail
+
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+
+# ── Colour helpers (only when a TTY) ─────────────────────────────────────────
+if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]]; then
+  GREEN=$'\e[92m'; RED=$'\e[91m'; YELLOW=$'\e[93m'
+  CYAN=$'\e[96m'; GREY=$'\e[90m'; RESET=$'\e[0m'; BOLD=$'\e[1m'
+else
+  GREEN=''; RED=''; YELLOW=''; CYAN=''; GREY=''; RESET=''; BOLD=''
+fi
+ok()    { printf '  %s✓%s  %s\n' "$GREEN"  "$RESET" "$*"; }
+warn()  { printf '  %s!%s  %s\n' "$YELLOW" "$RESET" "$*"; }
+err()   { printf '  %s✗%s  %s\n' "$RED"    "$RESET" "$*" >&2; }
+info()  { printf '  %s→%s  %s\n' "$CYAN"   "$RESET" "$*"; }
+
+# ── Read config ───────────────────────────────────────────────────────────────
+read_cfg_value() {
+  python3 - "$1" "$2" <<'PYEOF' 2>/dev/null
+import json, os, sys
+key, default = sys.argv[1], sys.argv[2]
+p = os.environ.get('WIKI_OS_CONFIG')
+try:
+    cfg = json.load(open(p))
+except Exception:
+    print(default); sys.exit(0)
+node = cfg
+for part in key.split('.'):
+    if isinstance(node, dict) and part in node:
+        node = node[part]
+    else:
+        print(default); sys.exit(0)
+if isinstance(node, str) and node.startswith('~'):
+    node = os.path.expanduser(node)
+print(node)
+PYEOF
+}
+
+WIKI_OS_CONFIG="$CONFIG"
+export WIKI_OS_CONFIG
+
+HOST=$(read_cfg_value openwebui.host "127.0.0.1")
+PORT=$(read_cfg_value openwebui.port "8080")
+DATA_DIR=$(read_cfg_value openwebui.data_dir "$HOME/.local/share/wiki-linux/openwebui-data")
+VENV=$(read_cfg_value openwebui.venv "$HOME/.local/share/wiki-linux/openwebui-venv")
+KNOWLEDGE_DIR=$(read_cfg_value openwebui.knowledge_dir "$WIKI_ROOT")
+OLLAMA_URL=$(read_cfg_value ollama.base_url "http://localhost:11434")
+
+PY="$VENV/bin/python3"
+OPENWEBUI="$VENV/bin/open-webui"
+PIDFILE="$DATA_DIR/openwebui.pid"
+LOGFILE="$DATA_DIR/openwebui.log"
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+is_installed() { [[ -x "$OPENWEBUI" ]]; }
+
+is_running_pid() {
+  [[ -f "$PIDFILE" ]] && pid=$(cat "$PIDFILE" 2>/dev/null) && \
+    [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null
+}
+
+is_listening() {
+  ss -tlnp 2>/dev/null | grep -q ":${PORT}\b"
+}
+
+bootstrap_install() {
+  info "Open WebUI is not installed at $VENV"
+  info "Installing into a dedicated venv (~500 MB download — one-time)..."
+  mkdir -p "$(dirname "$VENV")"
+  if [[ ! -d "$VENV" ]]; then
+    python3 -m venv "$VENV" || { err "Could not create venv at $VENV"; return 1; }
+  fi
+  "$VENV/bin/pip" install --quiet --upgrade pip wheel
+  "$VENV/bin/pip" install --quiet open-webui || {
+    err "pip install open-webui failed."
+    err "Check network / disk space, then re-run: wiki-openwebui --install"
+    return 1
+  }
+  ok "Open WebUI installed at $VENV"
+}
+
+ensure_data_dir() {
+  mkdir -p "$DATA_DIR"
+  # Bind-mount-style: expose ~/wiki to Open WebUI as a docs folder it can
+  # use as a knowledge collection. We create a symlink so the wiki vault
+  # appears inside Open WebUI's docs directory; the daemon's writes
+  # propagate immediately and Open WebUI re-indexes on its own schedule.
+  local docs="$DATA_DIR/docs"
+  mkdir -p "$docs"
+  if [[ ! -e "$docs/wiki" ]]; then
+    ln -s "$KNOWLEDGE_DIR" "$docs/wiki" 2>/dev/null || true
+  fi
+}
+
+start_server() {
+  ensure_data_dir
+  if is_running_pid || is_listening; then
+    ok "Already running on http://${HOST}:${PORT}"
+    return 0
+  fi
+
+  # Hardcode the integration: Ollama URL, data dir, no-signup, single-user.
+  # WEBUI_AUTH=False disables login (single-user local mode); flip back on
+  # in config.json/openwebui.auth if you ever expose the port.
+  export OLLAMA_BASE_URL="$OLLAMA_URL"
+  export DATA_DIR="$DATA_DIR"
+  export DOCS_DIR="$DATA_DIR/docs"
+  export WEBUI_AUTH="False"
+  export WEBUI_NAME="Wiki-Linux"
+  export ENABLE_RAG_HYBRID_SEARCH="True"
+  export RAG_EMBEDDING_MODEL="nomic-embed-text"
+
+  info "Starting Open WebUI on http://${HOST}:${PORT}"
+  info "  OLLAMA_BASE_URL=$OLLAMA_URL"
+  info "  DATA_DIR=$DATA_DIR"
+  info "  DOCS_DIR=$DATA_DIR/docs (mounts $KNOWLEDGE_DIR)"
+
+  if [[ "${1:-}" == "--background" ]]; then
+    nohup "$OPENWEBUI" serve --host "$HOST" --port "$PORT" \
+      >>"$LOGFILE" 2>&1 &
+    echo $! > "$PIDFILE"
+    sleep 2
+    if is_running_pid; then
+      ok "Started in background (PID $(cat "$PIDFILE")). Logs: $LOGFILE"
+      return 0
+    else
+      err "Background start failed; tail $LOGFILE for details."
+      return 1
+    fi
+  else
+    exec "$OPENWEBUI" serve --host "$HOST" --port "$PORT"
+  fi
+}
+
+stop_server() {
+  if is_running_pid; then
+    pid=$(cat "$PIDFILE")
+    kill "$pid" 2>/dev/null && ok "Stopped Open WebUI (PID $pid)" \
+      || warn "Could not stop PID $pid (already gone?)"
+    rm -f "$PIDFILE"
+    return 0
+  fi
+  warn "Not running."
+}
+
+status_server() {
+  printf '  Open WebUI status\n'
+  if is_installed;        then ok "installed at $VENV";         else warn "not installed (run: wiki-openwebui --install)"; fi
+  if is_running_pid;      then ok "running (PID $(cat "$PIDFILE"))"; else warn "no PID file"; fi
+  if is_listening;        then ok "listening on $HOST:$PORT";   else warn "no socket on $HOST:$PORT"; fi
+  printf '  URL:  %shttp://%s:%s%s\n' "$CYAN" "$HOST" "$PORT" "$RESET"
+}
+
+enable_systemd() {
+  local unit="$HOME/.config/systemd/user/wiki-openwebui.service"
+  mkdir -p "$(dirname "$unit")"
+  cat > "$unit" <<EOF
+[Unit]
+Description=Wiki-Linux — Open WebUI server (local Ollama chat UI)
+After=ollama.service network-online.target
+Wants=ollama.service
+
+[Service]
+Type=simple
+Environment=OLLAMA_BASE_URL=$OLLAMA_URL
+Environment=DATA_DIR=$DATA_DIR
+Environment=DOCS_DIR=$DATA_DIR/docs
+Environment=WEBUI_AUTH=False
+Environment=WEBUI_NAME=Wiki-Linux
+Environment=ENABLE_RAG_HYBRID_SEARCH=True
+Environment=RAG_EMBEDDING_MODEL=nomic-embed-text
+ExecStart=$OPENWEBUI serve --host $HOST --port $PORT
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+EOF
+  systemctl --user daemon-reload
+  systemctl --user enable --now wiki-openwebui.service \
+    && ok "wiki-openwebui.service enabled and running" \
+    || err "Failed to start wiki-openwebui.service (journalctl --user -u wiki-openwebui)"
+}
+
+disable_systemd() {
+  systemctl --user disable --now wiki-openwebui.service 2>/dev/null
+  rm -f "$HOME/.config/systemd/user/wiki-openwebui.service"
+  systemctl --user daemon-reload
+  ok "wiki-openwebui.service removed"
+}
+
+open_browser() {
+  local url="http://${HOST}:${PORT}"
+  if command -v xdg-open &>/dev/null; then
+    xdg-open "$url" >/dev/null 2>&1 &
+  elif command -v firefox &>/dev/null; then
+    firefox "$url" >/dev/null 2>&1 &
+  fi
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+case "${1:-}" in
+  --install)
+    bootstrap_install
+    ;;
+  --start)
+    if ! is_installed; then bootstrap_install || exit 1; fi
+    start_server --background && open_browser
+    ;;
+  --stop)
+    stop_server
+    ;;
+  --status)
+    status_server
+    ;;
+  --enable)
+    if ! is_installed; then bootstrap_install || exit 1; fi
+    enable_systemd
+    ;;
+  --disable)
+    disable_systemd
+    ;;
+  --help|-h)
+    grep -E '^# ' "$0" | head -25 | sed 's/^# \?//'
+    ;;
+  "")
+    if ! is_installed; then
+      bootstrap_install || exit 1
+    fi
+    if is_listening; then
+      ok "Open WebUI already running at http://${HOST}:${PORT}"
+      open_browser
+    else
+      open_browser
+      start_server   # foreground
+    fi
+    ;;
+  *)
+    err "Unknown flag: $1"
+    "$0" --help
+    exit 1
+    ;;
+esac

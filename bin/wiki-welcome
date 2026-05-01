@@ -2,8 +2,10 @@
 # wiki-welcome — shown at every login via autostart
 # Displays a styled zenity dialog explaining how wiki-linux works.
 
-WIKI_ROOT="${HOME}/wiki"
-PROJECT_ROOT="${HOME}/Documents/wiki-linux/wiki-linux"
+# Locate the project root by following symlinks from the script location.
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
 
 # Get live stats for the popup
 page_count=$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
@@ -14,8 +16,8 @@ last_sync=$(git -C "$WIKI_ROOT" log -1 --format='%ci' 2>/dev/null || echo 'not s
 
 zenity --info \
   --title="wiki-linux — your personal knowledge layer" \
-  --width=560 \
-  --height=420 \
+  --width=580 \
+  --height=520 \
   --ok-label="Open Terminal  (wiki help)" \
   --text="<b><big>  wiki-linux is running</big></b>
 
@@ -24,32 +26,46 @@ Daemon: <b>${daemon_status}</b>   |   Sync timer: <b>${timer_status}</b>
 Last sync: <tt>${last_sync}</tt>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<b>The two UIs</b>
+
+ <b>Obsidian</b> (data bank) — graph view, [[wikilinks]], BMO Chatbot.
+   Open: <tt>obsidian ~/wiki</tt>   or   <tt>wiki open</tt>
+
+ <b>Open WebUI</b> (main chat UI) — RAG over ~/wiki via local Ollama.
+   Open: <tt>wiki openwebui</tt>   →   <tt>http://127.0.0.1:8080</tt>
+   (first launch installs the server; ~500 MB one-time)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <b>How this system works:</b>
 
  <b>1. Auto-documentation</b>
-    The background daemon watches your files with inotify.
-    Drop any file in a watched folder → the local LLM (Mistral)
-    reads it and writes a wiki page automatically.
+    The daemon watches your files with inotify. Drop a file in
+    <tt>~/wiki/raw/</tt>, <tt>~/Downloads</tt>, or <tt>~/Documents</tt> → the
+    local LLM (Mistral) reads it and writes a wiki page automatically.
     Your <tt>/etc</tt> config files are mirrored as plain-English docs.
 
- <b>2. Three core operations  (open a terminal, run <tt>wiki</tt>)</b>
-
+ <b>2. Daily commands</b>
     <tt>wiki ingest ~/file.txt</tt>   — manually ingest any document
     <tt>wiki ask \"what does my fstab do?\"</tt>  — LLM Q&amp;A from wiki
-    <tt>wiki lint</tt>                — find broken links / orphan pages
+    <tt>wiki rescue</tt>            — import strays from Pictures/Videos/etc.
+    <tt>wiki doctor</tt>            — verify all 6 safety guarantees
+    <tt>wiki lint</tt>              — find broken links / orphan pages
 
  <b>3. Your own notes</b>
     <tt>wiki new \"My note title\"</tt>  — creates a page and opens \$EDITOR
     <tt>wiki search \"GPU driver\"</tt>  — ripgrep search across all pages
 
- <b>4. Safety guarantees</b>
-    • <tt>/etc</tt> is never written — read-only input only
+ <b>4. Safety guarantees (run <tt>wiki doctor</tt> any time)</b>
+    • <tt>config.json</tt> is chmod 0444 — daemon cannot rewrite it
+    • <tt>/etc</tt> is never written — hash snapshot detects drift
     • Nothing is hard-deleted — files move to <tt>_archive/</tt>
     • Everything is in Git — run <tt>wiki sync</tt> to push to GitHub
     • All services run as your user — no root required
+    • Plug a USB drive → automatic <tt>~/wiki</tt> backup popup
 
  <b>5. Full guide</b>
     <tt>cat ~/wiki/GUIDE.md</tt>   or   <tt>wiki open GUIDE</tt>
+    <tt>cat ~/wiki/EXPECTATIONS.md</tt>   — what's promised, what's locked
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 <i>This popup appears at every login. To disable it, remove

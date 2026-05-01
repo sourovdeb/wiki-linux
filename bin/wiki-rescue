@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+# bin/wiki-rescue — Find raw documents the user accidentally saved outside
+# the wiki and offer to import them into ~/wiki/raw/.
+#
+# Why this exists: monitor.watch_dirs only covers ~/wiki, ~/notes,
+# ~/Downloads, ~/Documents. If a user drags a PDF into ~/Pictures, drops a
+# .md in /tmp, or a writer saves a draft to ~/Public, those orphan files
+# never reach the wiki. This script scans the gap-zone, lists what it
+# finds, and lets the user move them into wiki/raw/ in one click — which
+# the daemon then ingests automatically.
+#
+# Usage:
+#   wiki-rescue            # interactive (yad/zenity, falls back to terminal)
+#   wiki-rescue --list     # just print stray files; do nothing
+#   wiki-rescue --auto     # move everything found, non-interactive
+#
+# Safety:
+#   - Files are MOVED (mv), not copied — that way the user has one canonical
+#     copy in the wiki and a backup in git history.
+#   - Move target: ~/wiki/raw/rescued/<original-relative-path>
+#   - Originals are preserved in git history once the daemon ingests them.
+#   - The script never touches files inside any path already watched by the
+#     daemon (no double-import).
+
+set -uo pipefail
+
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+RAW_DIR="$WIKI_ROOT/raw/rescued"
+
+MODE="interactive"
+[[ "${1:-}" == "--list" ]] && MODE="list"
+[[ "${1:-}" == "--auto" ]] && MODE="auto"
+
+# ── Read scan_dirs / extensions from config (with defaults) ──────────────────
+read_cfg() {
+  python3 - <<PYEOF 2>/dev/null
+import json, os, shlex
+p = os.environ.get('WIKI_OS_CONFIG', '$CONFIG')
+try:
+    cfg = json.load(open(p))
+except Exception:
+    cfg = {}
+r = cfg.get('rescue', {})
+def qjoin(items): return ' '.join(shlex.quote(str(x)) for x in items)
+print('SCAN_DIRS=(' + qjoin(
+    os.path.expanduser(d) for d in r.get('scan_dirs', [
+        '~/Pictures', '~/Videos', '~/Music', '~/Public', '~/Templates', '~/Desktop'
+    ])
+) + ')')
+print('EXTS=(' + qjoin(r.get('extensions', ['.md', '.txt', '.pdf', '.org', '.rst'])) + ')')
+print('IGNORE_DIRS=(' + qjoin(r.get('ignore_dirs',
+    ['.cache', '.thumbnails', '.trash', '.git', 'node_modules', '__pycache__'])) + ')')
+m = cfg.get('monitor', {})
+print('WATCH_DIRS=(' + qjoin(
+    os.path.expanduser(d) for d in m.get('watch_dirs', [])
+) + ')')
+PYEOF
+}
+
+declare -a SCAN_DIRS EXTS IGNORE_DIRS WATCH_DIRS
+eval "$(read_cfg)"
+[[ ${#SCAN_DIRS[@]}   -eq 0 ]] && SCAN_DIRS=("$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Desktop")
+[[ ${#EXTS[@]}        -eq 0 ]] && EXTS=(.md .txt .pdf .org .rst)
+[[ ${#IGNORE_DIRS[@]} -eq 0 ]] && IGNORE_DIRS=(.cache .thumbnails .trash .git node_modules __pycache__)
+[[ ${#WATCH_DIRS[@]}  -eq 0 ]] && WATCH_DIRS=("$HOME/wiki" "$HOME/Downloads" "$HOME/Documents")
+
+# ── Discover stray files ──────────────────────────────────────────────────────
+declare -a STRAY=()
+for dir in "${SCAN_DIRS[@]}"; do
+  [[ ! -d "$dir" ]] && continue
+  # Skip if this dir is itself watched (would be redundant).
+  skip=0
+  for w in "${WATCH_DIRS[@]}"; do
+    if [[ "$dir" == "$w" || "$dir" == "$w/"* ]]; then skip=1; break; fi
+  done
+  [[ $skip -eq 1 ]] && continue
+
+  # Build find expression for extensions and ignore_dirs.
+  find_args=()
+  first=1
+  for ext in "${EXTS[@]}"; do
+    if [[ $first -eq 1 ]]; then
+      find_args+=("-name" "*$ext")
+      first=0
+    else
+      find_args+=("-o" "-name" "*$ext")
+    fi
+  done
+
+  prune_args=()
+  for ig in "${IGNORE_DIRS[@]}"; do
+    prune_args+=("-name" "$ig" "-prune" "-o")
+  done
+
+  while IFS= read -r -d '' f; do
+    STRAY+=("$f")
+  done < <(find "$dir" "${prune_args[@]}" -type f \( "${find_args[@]}" \) -print0 2>/dev/null)
+done
+
+# ── Report ────────────────────────────────────────────────────────────────────
+COUNT="${#STRAY[@]}"
+if [[ $COUNT -eq 0 ]]; then
+  if [[ "$MODE" == "list" ]]; then
+    echo "No stray files found."
+    exit 0
+  fi
+  if command -v notify-send &>/dev/null; then
+    notify-send "wiki-rescue" "No stray files found." 2>/dev/null || true
+  fi
+  echo "wiki-rescue: nothing to import."
+  exit 0
+fi
+
+if [[ "$MODE" == "list" ]]; then
+  printf '%s\n' "${STRAY[@]}"
+  exit 0
+fi
+
+# ── Mode: auto (move everything) ──────────────────────────────────────────────
+import_one() {
+  local src="$1"
+  local rel="${src#$HOME/}"
+  rel="${rel#/}"
+  # Strip leading slash for /tmp paths.
+  rel="${rel#tmp/}"
+  local dest="$RAW_DIR/$rel"
+  mkdir -p "$(dirname "$dest")"
+  if [[ -e "$dest" ]]; then
+    # De-dupe by filename collision: append timestamp.
+    dest="${dest%.*}.$(date +%s).${dest##*.}"
+  fi
+  mv -- "$src" "$dest" && echo "$dest"
+}
+
+if [[ "$MODE" == "auto" ]]; then
+  imported=0
+  for f in "${STRAY[@]}"; do
+    if import_one "$f" >/dev/null; then
+      ((++imported))
+    fi
+  done
+  echo "wiki-rescue: imported $imported files into $RAW_DIR"
+  exit 0
+fi
+
+# ── Mode: interactive ─────────────────────────────────────────────────────────
+preview=$(printf '%s\n' "${STRAY[@]:0:20}")
+[[ $COUNT -gt 20 ]] && preview="${preview}
+... and $((COUNT - 20)) more"
+
+if command -v yad &>/dev/null; then
+  ANSWER=$(yad \
+    --title="wiki-rescue — $COUNT stray files" \
+    --width=620 --height=460 \
+    --text="<b>Found $COUNT files outside the watched folders.</b>
+
+These look like raw documents you may have meant to save into the wiki.
+If you import them, they'll be moved to:
+
+<tt>$RAW_DIR/</tt>
+
+…and the daemon will ingest them automatically.
+
+<b>Preview (first 20):</b>
+<tt>$preview</tt>" \
+    --button="Import all:0" \
+    --button="Skip:1" \
+    --button="Show all in terminal:2" \
+    2>/dev/null)
+  CODE=$?
+elif command -v zenity &>/dev/null; then
+  zenity --question \
+    --title="wiki-rescue — $COUNT stray files" \
+    --width=560 \
+    --text="Found <b>$COUNT</b> files outside watched folders.\n\nMove them all into <tt>$RAW_DIR</tt> for ingest?\n\nFirst 20:\n<tt>$preview</tt>" \
+    --ok-label="Import all" --cancel-label="Skip" 2>/dev/null
+  CODE=$?
+else
+  echo "Found $COUNT stray files. First 20:"
+  echo "$preview"
+  echo ""
+  read -rp "Import all into $RAW_DIR? [y/N] " ans
+  [[ "$ans" =~ ^[Yy] ]] && CODE=0 || CODE=1
+fi
+
+case "${CODE:-1}" in
+  0)
+    imported=0
+    for f in "${STRAY[@]}"; do
+      if import_one "$f" >/dev/null; then
+        ((++imported))
+      fi
+    done
+    msg="Imported $imported files into $RAW_DIR. Daemon will ingest them shortly."
+    echo "$msg"
+    command -v notify-send &>/dev/null && notify-send "wiki-rescue" "$msg" 2>/dev/null || true
+    ;;
+  2)
+    printf '%s\n' "${STRAY[@]}"
+    ;;
+  *)
+    echo "wiki-rescue: nothing imported."
+    ;;
+esac

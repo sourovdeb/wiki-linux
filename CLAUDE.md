@@ -1,5 +1,14 @@
 # CLAUDE.md — Instructions for Claude Code
 
+> **Read order for Claude Code on this repo:**
+> 1. `WIKI_AGENT.md` — the philosophy
+> 2. `AGENT_PLAYBOOK.md` — the explicit step-by-step playbook
+> 3. This file — Claude Code-specific conventions
+> 4. The platform task file (`LINUX_AGENT_TASKS.md`,
+>    `WINDOWS_AGENT_TASKS.md`, `MACOS_AGENT_TASKS.md`, or
+>    `CODESPACES_INTERNAL.md`)
+> 5. `references/karpathy-llm-wiki.md` — the original gist (for context)
+
 ## Project Identity
 
 This is **Wiki-OS**, a Python-based daemon system that adds a wiki-native

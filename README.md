@@ -43,13 +43,17 @@ For other platforms see **WINDOWS_AGENT_TASKS.md** or **MACOS_AGENT_TASKS.md**.
 
 ```
 wiki-linux/
+├── README.md                ← you are here
+├── SKILL_FLOOR.md           ← plain-language guide for non-technical users
 ├── WIKI_AGENT.md            ← LLM idea file: paste into any AI agent
+├── AGENT_PLAYBOOK.md        ← explicit step-by-step playbook for any agent
 ├── AGENTS.md                ← agent schema (Codex, Claude Code, etc.)
 ├── CLAUDE.md                ← Claude Code specific schema
 ├── LINUX_AGENT_TASKS.md     ← setup steps for Linux agents
 ├── WINDOWS_AGENT_TASKS.md   ← setup steps for Windows agents
 ├── MACOS_AGENT_TASKS.md     ← setup steps for macOS agents
 ├── CODESPACES_AGENT.md      ← GitHub Codespaces / cloud agents
+├── CODESPACES_INTERNAL.md   ← internal Codespaces environment facts
 ├── SUPPORT_POPUP.md         ← wiki-notify popup helper
 ├── LICENSE                  ← MIT
 ├── config.json              ← configuration (copy to ~/.config/wiki-os/)
@@ -59,9 +63,14 @@ wiki-linux/
 ├── src/                     ← Python daemon modules
 │   ├── config.py, monitor.py, llm.py
 │   ├── indexer.py, search.py, sync.py
+│   └── agent/ingest.py      ← messy-user auto-organiser
 ├── systemd/                 ← user-level service and timer units
 ├── templates/               ← Jinja2 page templates
-└── tests/                   ← pytest unit tests
+├── tests/                   ← pytest unit tests
+├── references/              ← vendored reference docs
+│   ├── karpathy-llm-wiki.md ← the original LLM Wiki gist (copy)
+│   └── archwiki.md          ← ArchWiki install + usage guide
+└── .devcontainer/           ← Codespaces config
 ```
 
 ---
@@ -92,10 +101,11 @@ file — self-contained, model-agnostic, works with TinyLlama through Opus.
 
 | Agent | Entry file |
 |---|---|
+| **Non-technical user** | `SKILL_FLOOR.md` (plain-language guide) |
 | Claude Code | `CLAUDE.md` |
 | OpenAI Codex | `AGENTS.md` |
-| Any other LLM | `WIKI_AGENT.md` |
-| GitHub Codespaces | `CODESPACES_AGENT.md` |
+| Any other LLM | `WIKI_AGENT.md` + `AGENT_PLAYBOOK.md` |
+| GitHub Codespaces | `CODESPACES_AGENT.md` + `CODESPACES_INTERNAL.md` |
 | Linux platform tasks | `LINUX_AGENT_TASKS.md` |
 | Windows platform tasks | `WINDOWS_AGENT_TASKS.md` |
 | macOS platform tasks | `MACOS_AGENT_TASKS.md` |

@@ -3,9 +3,14 @@
 > This file is read by OpenAI Codex, Claude Code, and any other agent
 > working on this repository. Read it before touching any file.
 >
-> The master "idea file" is **WIKI_AGENT.md** — copy it into any LLM
-> agent to bootstrap a new installation. This file (AGENTS.md) is the
-> project-specific schema that a running agent uses during ongoing work.
+> **Read order for agents:**
+> 1. `WIKI_AGENT.md` — the philosophy (Karpathy's pattern + our adaptations)
+> 2. `AGENT_PLAYBOOK.md` — the explicit step-by-step script (works for
+>    TinyLlama through Opus)
+> 3. This file (`AGENTS.md`) — the schema specific to this repo
+> 4. The platform task file matching the user's OS
+>
+> **For non-technical users:** read `SKILL_FLOOR.md` instead.
 
 ---
 

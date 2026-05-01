@@ -1,6 +1,6 @@
 ---
 title: Recently Changed
-updated: 2026-04-30 22:03 UTC
+updated: 2026-05-01 11:52 UTC
 ---
 
 # Recently Changed
@@ -13,7 +13,6 @@ updated: 2026-04-30 22:03 UTC
 - [[system/config/hostname|hostname]] — 2026-04-30 21:58:48.672276+00:00
 - [[system/config/hosts|hosts]] — 2026-04-30 21:58:48.669901+00:00
 - [[system/config/fstab|fstab]] — 2026-04-30 21:58:48.667393+00:00
-- [[system/config/pacman.conf|pacman.conf]] — 2026-04-30 21:58:48.662953+00:00
 - [[user/projects/wiki-linux|Wiki-OS Project]] — 2026-04-30 21:58:48.662633+00:00
 - [[user/research/README|Research]] — 2026-04-30 21:58:48.662448+00:00
 - [[user/projects/README|Projects]] — 2026-04-30 21:58:48.662286+00:00
@@ -25,3 +24,4 @@ updated: 2026-04-30 22:03 UTC
 - [[START-HERE|Start Here]] — 2026-04-30 21:58:48.660732+00:00
 - [[README|Wiki Index]] — 2026-04-30 21:58:48.660535+00:00
 - [[user/research|Research]] — 2026-04-30 21:57:52.988785+00:00
+- [[user/notes|Notes]] — 2026-04-30 21:57:21.493526+00:00

@@ -1,11 +1,11 @@
 ---
 title: Wiki Index
-updated: 2026-04-30 22:03 UTC
+updated: 2026-05-01 11:52 UTC
 ---
 
 # Wiki Index
 
-*23 pages — last rebuilt 2026-04-30 22:03 UTC*
+*23 pages — last rebuilt 2026-05-01 11:52 UTC*
 
 ## Root
 
@@ -19,6 +19,7 @@ updated: 2026-04-30 22:03 UTC
 
 ## System
 
+- [[system/config/pacman.conf|Pacman.Conf]] — | --- | --- | --- |
 - [[system/overview|System Overview]] — This page is the simplest high-level summary of the current machine setup.  `system` `overview`
 - [[system/README|System Space]] — This space explains how the computer is configured in plain markdown pages.  `system` `root`
 - [[system/config/fstab|fstab]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
@@ -27,7 +28,6 @@ updated: 2026-04-30 22:03 UTC
 - [[system/config/locale.conf|locale.conf]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
 - [[system/config/makepkg.conf|makepkg.conf]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
 - [[system/config/mkinitcpio.conf|mkinitcpio.conf]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
-- [[system/config/pacman.conf|pacman.conf]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
 - [[system/config/ssh/sshd_config|sshd_config]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
 - [[system/config/vconsole.conf|vconsole.conf]] — LLM explanation unavailable during bootstrap. Review the live contents below; the page will be refined automatically on future updates.  `system` `config`
 

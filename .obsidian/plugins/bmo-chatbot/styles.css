@@ -1,0 +1,548 @@
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+.userMessage pre,
+.preElement {
+	font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+		sans-serif;
+	margin: 0;
+	white-space: pre-wrap;
+}
+
+.chatbotContainer {
+	height: 100%;
+	max-height: 99.2%;
+	position: relative;
+	border-radius: 5px;
+	border: 1px solid var(--background-modifier-border);
+	word-break: break-word;
+	display: flex;
+	flex-direction: column;
+	max-width: 800px;
+	margin: auto;
+}
+
+#header {
+	padding: 10px 0px;
+}
+
+#chatbotNameHeading {
+	color: var(--interactive-accent);
+	text-align: center;
+	margin-top: 0;
+	margin-bottom: 0;
+	padding: 0px 0px 0px 0px;
+	font-size: 1.5rem;
+}
+
+#modelName {
+	margin: 0rem 0;
+	text-align: center;
+	color: var(--interactive-accent);
+	font-size: 0.65rem;
+}
+
+#referenceCurrentNote {
+	margin: -0.5rem 0 0.5rem 0;
+	padding: 0 0 0 0;
+	text-align: center;
+	color: var(--interactive-accent);
+	font-size: 0.65rem;
+}
+
+/* messageContainer */
+
+#messageContainer {
+	margin-top: 0px;
+	flex-grow: 1;
+	overflow-y: auto;
+	-webkit-touch-callout: default;
+	-webkit-user-select: text;
+	-khtml-user-select: text;
+	-moz-user-select: text;
+	-ms-user-select: text;
+	-o-user-select: text;
+	user-select: text;
+	max-height: calc(100% - 120px);
+	word-wrap: break-word;
+}
+
+/* User & Bot Messages */
+
+.userName,
+.chatbotName {
+	display: block;
+	font-size: 0.8rem;
+	font-weight: bold;
+	color: var(--interactive-accent);
+	margin: 0;
+}
+
+.userMessage,
+.botMessage {
+	margin: 0;
+	padding: 10px 3.5%;
+	width: 100%;
+	display: inline-block;
+}
+
+.userMessage {
+	background-color: var(--background-primary);
+	position: relative;
+}
+
+.userMessage p,
+.botMessage p {
+	margin: 0;
+	line-height: 1.6;
+}
+
+.messageBlock {
+	margin: 0;
+	overflow-wrap: break-word;
+	position: relative;
+}
+
+/* messageBlock style */
+
+.messageBlock pre:not(.preElement) {
+	position: relative;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+	font-size: 14px;
+	background-color: #282c34;
+	padding: 5px;
+	border-radius: 5px;
+	border: 1px solid #ccc;
+	line-height: 1.5;
+}
+
+.messageBlock pre code {
+	padding: 5px;
+	font-weight: bold;
+	color: #ced4df;
+}
+
+.edit-textarea {
+	max-width: 100%;
+	min-width: 100%;
+	min-height: 2rem;
+	width: 100%;
+	margin-top: 0.3rem;
+}
+
+.textarea-edit-button,
+.textarea-cancel-button {
+	margin: 0.2rem 0.5rem 0 0;
+	font-size: 0.7rem;
+	padding: 0 0.6rem;
+}
+
+.textarea-edit-button:hover {
+	background-color: var(--interactive-accent);
+}
+
+button.copy-code-button,
+.messageBlock pre button.copy-button,
+.messageBlock pre button.edit-button {
+	padding: 0 4px;
+	background-color: transparent !important;
+	box-shadow: none !important;
+	border: none;
+	position: absolute;
+	top: 0px;
+	right: 0px;
+	color: var(--text-muted);
+	display: inline-block;
+	max-width: 30px;
+}
+
+button.copy-code-button:hover,
+.messageBlock .copy-button:hover,
+.messageBlock .edit-button:hover {
+	color: white;
+}
+
+.userMessageToolBar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	height: 1.2rem;
+}
+
+.button-container {
+	margin: 0;
+}
+
+/* Styles for copy button */
+.userMessageToolBar button.regenerate-button,
+.userMessageToolBar button.edit-button,
+.userMessageToolBar button.copy-button,
+.userMessageToolBar button.trash-button {
+	padding: 0 3px;
+	background-color: transparent !important;
+	box-shadow: none !important;
+	border: none;
+	color: var(--interactive-accent);
+	width: 1.2rem;
+}
+
+.userMessageToolBar .regenerate-button:hover,
+.userMessageToolBar .edit-button:hover,
+.userMessageToolBar .copy-button:hover {
+	color: var(--text-muted);
+}
+
+.userMessageToolBar .trash-button:hover {
+	color: rgb(188, 35, 35);
+}
+
+.botMessageToolBar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	height: 1.2rem;
+}
+
+.botMessageToolBar button.edit-button,
+.botMessageToolBar button.copy-button,
+.botMessageToolBar button.append-button {
+	padding: 0 3px;
+	background-color: transparent !important;
+	box-shadow: none !important;
+	border: none;
+	color: var(--interactive-accent);
+	width: 1.2rem;
+}
+
+.botMessageToolBar .edit-button:hover,
+.botMessageToolBar .copy-button:hover,
+.botMessageToolBar .append-button:hover {
+	color: var(--text-muted);
+}
+
+/* Hide buttons */
+.userMessage .edit-button,
+.userMessage .regenerate-button,
+.userMessage .copy-button,
+.userMessage .trash-button,
+.botMessage .append-button,
+.botMessage .copy-button,
+.botMessage .edit-button {
+	visibility: hidden;
+	opacity: 0;
+}
+
+/* Show buttons on hover */
+.userMessage:hover .edit-button,
+.userMessage:hover .regenerate-button,
+.userMessage:hover .copy-button,
+.userMessage:hover .trash-button,
+.botMessage:hover .append-button,
+.botMessage:hover .copy-button,
+.botMessage:hover .edit-button {
+	visibility: visible;
+	opacity: 1;
+}
+
+.userMessageToolBar button,
+.botMessageToolBar button {
+	width: 1.2rem;
+}
+
+/* Tables */
+
+.messageBlock table {
+	border: 1px solid gray;
+	border-collapse: collapse;
+	margin: 5px 0px;
+}
+.messageBlock th,
+.messageBlock td {
+	border: 1px solid gray;
+}
+
+/* chatbox - textarea */
+
+.chatbox {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	margin: 13px 3.5%;
+	padding: 3px;
+	background-color: var(--interactive-accent);
+	border-radius: 5px;
+}
+
+.chatbox textarea {
+	color: var(--text-normal);
+	font-weight: 500;
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	width: 100%;
+	height: 29px;
+	max-height: 150px;
+	resize: none;
+	font-size: 16px;
+	overflow-y: auto;
+}
+
+.chatbox textarea::placeholder {
+	color: var(--text-normal);
+	font-weight: 500;
+}
+
+.chatbox textarea:focus {
+	outline: none;
+	box-shadow: none;
+}
+
+.chatbox textarea::selection {
+	background: blue !important;
+}
+
+/* Send Button */
+
+.chatbox .submit-button {
+	background-color: var(--interactive-accent);
+	filter: brightness(90%);
+	box-shadow: none !important;
+	color: white;
+	border: none;
+	border-radius: 50%;
+	padding: 8px;
+	max-width: 30px;
+	cursor: pointer;
+	margin: 0 3px;
+}
+
+.chatbox .submit-button:hover {
+	filter: brightness(80%);
+}
+
+.is-mobile .chatbox .submit-button {
+	background-color: var(--interactive-accent);
+	filter: brightness(90%);
+	color: white;
+	border: none;
+	border-radius: 50%;
+	padding: 8px !important;
+	max-width: 30px;
+	max-height: 30px;
+	cursor: pointer;
+}
+
+.is-mobile .chatbox .submit-button:hover {
+	filter: brightness(80%);
+}
+
+/* Misc */
+
+.errorMessage {
+	color: red;
+}
+
+.disabled {
+	pointer-events: none;
+}
+
+#spacer {
+	height: 8vh;
+}
+
+#loading {
+	color: white;
+	background-color: #808080;
+	padding: 0px 5px 12px 5px;
+	border-radius: 5px;
+	display: none;
+	line-height: 10px;
+	font-size: 25px;
+	font-weight: bolder;
+	margin: 5px 0px;
+	display: inline-block;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.theme-light #loading {
+	color: white;
+	background-color: #b0b0b0;
+}
+
+@keyframes blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	49.9% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+	50.1% {
+		opacity: 0;
+	}
+}
+
+#loading span {
+	animation: blink 1.3s infinite both;
+}
+
+#loading span:nth-child(1) {
+	animation-delay: 0s;
+}
+
+#loading span:nth-child(2) {
+	animation-delay: 0.2s;
+}
+
+#loading span:nth-child(3) {
+	animation-delay: 0.4s;
+}
+
+.dotIndicator {
+	display: inline-block;
+	width: 0.3rem;
+	height: 0.3rem;
+	background-color: #da2c2c;
+	border-radius: 50%;
+	margin-left: 0.25rem;
+	margin-bottom: 0.05rem;
+}
+
+ul#dropdownOptions {
+	position: absolute;
+	top: 1rem;
+	right: 0;
+	display: none;
+	z-index: 1;
+	background-color: #282c34;
+	border: 1px solid #ccc;
+	border-radius: 0.2rem;
+	list-style: none;
+	padding: 0;
+}
+
+#dropdownOptions li {
+	padding: 0.3rem 1rem;
+	font-size: 0.8rem;
+}
+
+/* CSS for highlighting <li> elements on hover */
+ul#dropdownOptions li:hover {
+	background-color: var(--interactive-accent);
+	color: white;
+	cursor: pointer;
+}
+
+.commandBotMessage {
+	border: 1px solid #ccc;
+	background-color: #282c34;
+	padding: 10px;
+	border-radius: 5px;
+	margin: 0.5rem;
+	font-size: 0.8rem;
+}
+
+.commandBotMessage h2 {
+	margin: 8px 0 12px 0;
+}
+
+.commandBotMessage p {
+	padding: 0.1rem 0;
+}
+
+.commandBotMessage code {
+	background-color: #4d5158;
+	border-radius: 0.2rem;
+	padding: 0.16rem;
+}
+
+/* Display Error Bot Message Style */
+
+.errorBotMessage {
+	color: #f30000;
+	border: 1px solid #ccc;
+	background-color: #282c34;
+	padding: 10px;
+	border-radius: 5px;
+	margin: 0.5rem;
+	font-size: 0.8rem;
+}
+
+/* Toggle Settings Container */
+.toggleSettingContainer {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	justify-content: space-between;
+}
+
+.settingsContainer {
+	margin: 0rem 1.4rem;
+}
+
+.chevron-icon {
+	margin-left: 0.5rem;
+	--icon-size: 1.2rem;
+}
+
+/* Light Theme */
+
+.theme-light .commandBotMessage,
+.theme-light .errorBotMessage {
+	border: 1px solid #ccc;
+	background-color: white;
+	padding: 10px;
+	border-radius: 5px;
+	margin: 0.5rem;
+	font-size: 0.8rem;
+}
+
+.theme-light .commandBotMessage code {
+	background-color: #ccc;
+	border-radius: 0.2rem;
+	padding: 0.16rem;
+}
+
+.theme-light .messageBlock pre {
+	position: relative;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+	font-size: 14px;
+	background-color: white;
+	padding: 5px;
+	border-radius: 5px;
+	border: 1px solid #ccc;
+	line-height: 1.5;
+}
+
+.theme-light .messageBlock pre code {
+	padding: 5px;
+	font-weight: bold;
+	color: #222222;
+}
+
+.theme-light .chatbox textarea::selection {
+	background: var(--interactive-accent) !important;
+}
+
+#modelOptions {
+	height: 24px;
+	font-size: 0.7em;
+	color: var(--interactive-accent);
+	margin: 5px auto;
+	padding: 0 8px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+}

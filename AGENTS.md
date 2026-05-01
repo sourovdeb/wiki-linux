@@ -1,97 +1,122 @@
-# AGENTS.md — Instructions for OpenAI Codex
+# AGENTS.md — Wiki-Linux Agent Instructions
 
-## Project Summary
-
-Wiki-OS is a daemon system for Arch Linux that creates and maintains a
-Markdown-based personal knowledge base (`~/wiki`) with real-time file monitoring
-and a local LLM. It mirrors selected system configuration files from `/etc` into
-human-readable wiki pages, and provides a `wiki` shell command as the user's
-single entry point. All processing is offline. Nothing requires internet access
-after initial package installation.
-
-Before writing any code, read `README.md` in full. It explains every
-architectural decision and why the approach taken is correct.
+> This file is read by OpenAI Codex, Claude Code, and any other agent
+> working on this repository. Read it before touching any file.
+>
+> **Read order for agents:**
+> 1. `WIKI_AGENT.md` — the philosophy (Karpathy's pattern + our adaptations)
+> 2. `AGENT_PLAYBOOK.md` — the explicit step-by-step script (works for
+>    TinyLlama through Opus)
+> 3. This file (`AGENTS.md`) — the schema specific to this repo
+> 4. The platform task file matching the user's OS
+>
+> **For non-technical users:** read `SKILL_FLOOR.md` instead.
 
 ---
 
-## Project Layout
+## What This Project Is
+
+A personal wiki-native knowledge layer for Arch Linux (and other
+systems). It adds `~/wiki/` — a Git-tracked directory of Markdown files
+— on top of a stock OS. The OS itself is never modified. `/etc` stays
+where it is. The wiki mirrors and documents it.
+
+Reference: Andrej Karpathy's `llm-wiki.md`
+https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+
+---
+
+## Repository Layout
 
 ```
-wiki-os/
-├── AGENTS.md                ← you are here
-├── CLAUDE.md                ← same instructions for Claude Code
-├── README.md                ← human doc, read this first
-├── config.json              ← default configuration (schema + defaults)
-├── install.sh               ← idempotent installer
-├── bin/wiki                 ← bash CLI dispatcher
+wiki-linux/
+├── WIKI_AGENT.md            ← master idea file (copy into any LLM agent)
+├── AGENTS.md                ← you are here (Codex / agent schema)
+├── CLAUDE.md                ← same schema for Claude Code
+├── LINUX_AGENT_TASKS.md     ← concrete Arch/Debian setup steps
+├── WINDOWS_AGENT_TASKS.md   ← Windows 10/11 setup steps (safe version)
+├── SUPPORT_POPUP.md         ← wiki-notify helper (all platforms)
+├── CODESPACES_AGENT.md      ← cloud / GitHub Codespaces agent tasks
+├── README.md                ← human documentation
+├── config.json              ← default configuration
+├── install.sh               ← idempotent installer (Arch/Debian)
+├── requirements.txt         ← Python dependencies
+├── bin/
+│   └── wiki                 ← bash CLI dispatcher
 ├── src/
-│   ├── config.py            ← config loader
-│   ├── monitor.py           ← inotify daemon (daemon entry point)
-│   ├── llm.py               ← Ollama API module
-│   ├── indexer.py           ← wiki index generator
+│   ├── __init__.py
+│   ├── config.py            ← loads config.json, expands paths
+│   ├── monitor.py           ← inotify daemon (main daemon entry point)
+│   ├── llm.py               ← Ollama API wrapper, JSON output
+│   ├── indexer.py           ← rebuilds _meta/index.md and recent.md
 │   ├── search.py            ← ripgrep + RAG search
-│   └── sync.py              ← git auto-commit
+│   └── sync.py              ← git auto-commit and push
 ├── systemd/
-│   ├── wiki-monitor.service
-│   ├── wiki-sync.service
-│   └── wiki-sync.timer
+│   ├── wiki-monitor.service ← user-level service for monitor.py
+│   ├── wiki-sync.service    ← one-shot git commit service
+│   └── wiki-sync.timer      ← fires wiki-sync.service every 5 min
 └── templates/
-    ├── system_config.md
-    └── new_page.md
+    ├── system_config.md     ← Jinja2 template for /etc mirror pages
+    └── new_page.md          ← Jinja2 template for new user pages
 ```
+
+---
+
+## Non-Negotiable Invariants
+
+1. **Never write outside `~/wiki` (WIKI_ROOT)**. Every LLM-provided
+   `target_path` must be validated before writing:
+   `Path(WIKI_ROOT / path).resolve().is_relative_to(WIKI_ROOT)`
+
+2. **Never write to `/etc`, `/usr`, `/var`, or any system path**.
+   Data flows one way: source file → wiki page. Never the reverse.
+
+3. **Suppress self-writes**. After writing to WIKI_ROOT, record the
+   path in a deque with a timestamp. Skip inotify events for that path
+   for `DEBOUNCE_SECONDS` (default 5).
+
+4. **No root, no fanotify**. Use `inotify_simple`. The daemon runs as
+   the login user via `systemctl --user`.
+
+5. **No subprocess Ollama**. Use the `ollama` Python client only.
+   All LLM calls go to `localhost:11434`.
+
+6. **force JSON**. Use `format="json"` in `ollama.generate()`. Wrap
+   `json.loads()` in try/except. Skip on parse failure, never write
+   partial output.
+
+7. **Confirm before destructive operations**. Uninstall, delete, move,
+   rename — pause and get explicit user confirmation.
 
 ---
 
 ## Dependencies
 
-Python runtime: `ollama`, `inotify_simple`, `pyyaml`, `jinja2`.
-System tools: `ollama`, `ripgrep`, `git`, `glow`, `md-tui` (AUR).
+Python: `ollama>=0.3`, `inotify_simple>=1.3`, `pyyaml>=6.0`, `jinja2>=3.1`
 
-No other dependencies. Do not introduce new ones without strong justification.
+System (Arch): `git`, `ripgrep`, `glow`, `ollama`, `obsidian`
+System (Debian): `git`, `ripgrep`, then Obsidian via flatpak
 
----
-
-## Constraints the Codex Agent Must Respect
-
-**Filesystem safety**: The daemon only writes inside `~/wiki` (the configured
-`WIKI_ROOT`). Every LLM-provided `target_path` must be validated with
-`Path(WIKI_ROOT / target_path).resolve().is_relative_to(WIKI_ROOT)` before any
-file write. Paths that escape `WIKI_ROOT` are rejected and logged. This is a
-security invariant — never relax it.
-
-**No root, no fanotify**: The daemon runs as a normal user via `systemctl
---user`. Use `inotify_simple` for file monitoring. Do not use fanotify,
-pyinotify, or watchdog.
-
-**No subprocess Ollama**: All LLM interaction goes through the `ollama` Python
-library talking to `localhost:11434`. Never call `subprocess.run(["ollama",
-...])`.
-
-**Self-write suppression**: After writing any file to `WIKI_ROOT`, record the
-path and timestamp in a deque. Ignore inotify events for that path for
-`DEBOUNCE_SECONDS` (default 5) to prevent the daemon from re-processing its own
-output.
-
-**LLM output validation**: Always use `format="json"` in `ollama.generate()`.
-Parse the response with a try/except around `json.loads`. Verify required keys
-(`target_path`, `content`) before using them. If validation fails, log the error
-and skip the file — do not write partial output.
-
-**Content truncation**: Read at most `config["ollama"]["context_limit_bytes"]`
-bytes of any source file. Log a warning if truncation occurs.
+Do not add new Python dependencies without a concrete reason.
+Do not use: `fanotify`, `pyinotify`, `watchdog`, `requests` (ollama client covers HTTP).
 
 ---
 
 ## Code Style
 
-Python 3.11+. `from __future__ import annotations` in every module. `pathlib.Path`
-for all filesystem operations. `logging` module with logger name `wiki.<module>`.
-Functions that can fail return `bool` or `Optional[T]`, they do not raise into
-the event loop. All configurable values come from `src/config.py` — no hardcoded
-paths, model names, or timeouts in other modules.
+- Python 3.11+, `from __future__ import annotations` in every module
+- `pathlib.Path` everywhere, never `os.path`
+- `logging` module, logger name `wiki.<module>`
+- Functions that can fail return `bool` or `Optional[T]`, never raise into event loops
+- All configurable values from `src/config.py`, nothing hardcoded
+- Shell: `set -euo pipefail`, `[[ ]]` conditionals, `command -v` for checks
 
-Shell scripts are POSIX bash. `set -euo pipefail` at the top of every script.
-Prefer `command -v` for dependency checks. Prefer `[[ ]]` for conditionals.
+---
+
+## Build Order (if implementing from scratch)
+
+`config.py` → `llm.py` → `monitor.py` → `indexer.py` → `search.py`
+→ `bin/wiki` → `install.sh` → systemd units
 
 ---
 
@@ -101,27 +126,6 @@ Prefer `command -v` for dependency checks. Prefer `[[ ]]` for conditionals.
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt pytest
 pytest tests/
-```
-
-Unit tests mock `ollama.generate` and `inotify_simple.INotify`. Tests do not
-require a live Ollama instance or Arch Linux. Place test files in `tests/` with
-the prefix `test_`.
-
-For integration testing with a live Ollama:
-```bash
+# Integration test (requires Ollama running):
 WIKI_OS_CONFIG=./config.json python3 -m src.monitor --dry-run --once
 ```
-
----
-
-## Implementation Priorities
-
-If implementing from this spec, build in this order to be able to test each
-layer incrementally. First `src/config.py`, because every other module depends
-on it. Then `src/llm.py`, testable in isolation with a mock file. Then
-`src/monitor.py`, the core daemon. Then `src/indexer.py` and `src/search.py`,
-which are optional from the daemon's perspective but required for the `wiki ask`
-and `wiki search` commands. Finally `bin/wiki` and `install.sh`, which assume
-all the Python modules are working.
-
-The systemd units are simple templates; write them last and keep them minimal.

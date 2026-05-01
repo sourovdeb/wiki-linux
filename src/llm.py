@@ -110,9 +110,12 @@ def generate_wiki_page(
         return None
 
     # --- Parse and validate response ---
+    # ollama >= 0.4.0 returns a GenerateResponse object (attribute access).
+    # Older versions returned a plain dict. Support both defensively.
     try:
-        data = json.loads(response["response"])
-    except (KeyError, json.JSONDecodeError) as e:
+        raw = response.response if hasattr(response, "response") else response["response"]
+        data = json.loads(raw)
+    except (KeyError, AttributeError, json.JSONDecodeError) as e:
         log.warning("Malformed LLM response for %s: %s", source_path, e)
         return None
 
@@ -179,7 +182,8 @@ def answer_question(question: str, snippets: list[dict]) -> str:
             prompt=prompt,
             stream=False,
         )
-        return response.get("response", "No response from model.").strip()
+        raw = response.response if hasattr(response, "response") else response.get("response", "")
+        return raw.strip() or "No response from model."
     except Exception as e:
         log.error("Ollama RAG call failed: %s", e)
         return f"LLM error: {e}"

@@ -1,11 +1,19 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 18:54 UTC
+updated: 2026-05-01 19:40 UTC
 ---
 
 # Wiki Index
 
-*25 pages — last rebuilt 2026-05-01 18:54 UTC*
+*30 pages — last rebuilt 2026-05-01 19:40 UTC*
+
+## Wiki-Tools
+
+- [[WIKI-TOOLS/CLINE-HANDOFF|Cline Handoff]]
+- [[WIKI-TOOLS/FINAL-SETUP-SUMMARY|Final Setup Summary]]
+- [[WIKI-TOOLS/DAILY-GUIDE|How to Use Wiki-Linux Daily]]  `guide` `daily` `quick-reference`
+- [[WIKI-TOOLS/SETUP-KEYBOARD-SHORTCUT|Setup Keyboard Shortcut]]
+- [[WIKI-TOOLS/START-HERE|Start Here]]  `start` `guide`
 
 ## Root
 

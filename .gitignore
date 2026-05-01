@@ -2,3 +2,9 @@ _tmp/
 *.log
 .obsidian/workspace.json
 .obsidian/workspaces.json
+
+
+
+
+# Ignore Smart Environment folder
+.smart-env

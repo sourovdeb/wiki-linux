@@ -1,5 +1,5 @@
 """
-src/config.py — Configuration loader for Wiki-OS.
+src/config.py — Configuration loader for Wiki-Linux.
 
 Loads config.json from the standard location, expands ~ in all path
 values, and exposes a single `cfg` dict that every other module imports.

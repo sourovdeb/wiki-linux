@@ -11,7 +11,7 @@ mdt, and every other wiki viewer without special handling.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -54,6 +54,13 @@ def _page_title(path: Path, frontmatter: dict) -> str:
         frontmatter.get("title")
         or path.stem.replace("-", " ").replace("_", " ").title()
     )
+
+
+def _normalize_date(val) -> str:
+    """Convert date/datetime to ISO string for consistent sorting."""
+    if isinstance(val, (datetime, date)):
+        return val.isoformat()
+    return str(val) if val else ""
 
 
 def rebuild(wiki_root: Path) -> None:
@@ -136,7 +143,7 @@ def _write_recent(target: Path, pages: list[dict]) -> None:
     # Sort by 'updated' descending; pages without timestamps go to the bottom.
     dated = sorted(
         [p for p in pages if p["updated"]],
-        key=lambda x: x["updated"],
+        key=lambda x: _normalize_date(x["updated"]),
         reverse=True,
     )
     undated = [p for p in pages if not p["updated"]]

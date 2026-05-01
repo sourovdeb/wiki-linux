@@ -1,14 +1,15 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 12:12 UTC
+updated: 2026-05-01 16:43 UTC
 ---
 
 # Wiki Index
 
-*23 pages — last rebuilt 2026-05-01 12:12 UTC*
+*24 pages — last rebuilt 2026-05-01 16:43 UTC*
 
 ## Root
 
+- [[GUIDE|Guide]]
 - [[START-HERE|Start Here]]  `start` `guide`
 - [[README|Wiki Index]]  `home` `index`
 

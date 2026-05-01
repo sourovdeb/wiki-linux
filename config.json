@@ -25,7 +25,9 @@
     "debounce_seconds": 5,
     "watch_dirs": [
       "~/wiki",
-      "~/notes"
+      "~/notes",
+      "~/Downloads",
+      "~/Documents"
     ],
     "log_file": "~/.cache/wiki-linux/monitor.log",
     "etc_allowlist": [

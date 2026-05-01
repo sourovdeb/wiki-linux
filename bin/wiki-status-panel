@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# wiki-status-panel — Bottom panel status for wiki-linux + Ollama
+# Shows daemon status, Ollama models, wiki stats, git status
+
+set -euo pipefail
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Icons
+ICON_OK='✓'
+ICON_ERR='✗'
+ICON_WARN='⚠'
+ICON_DAEMON='◉'
+ICON_MODEL='◆'
+ICON_WIKI='▸'
+
+wiki_root="${WIKI_OS_ROOT:-$HOME/wiki}"
+
+# 1. Ollama status
+echo -e "${BLUE}${ICON_MODEL} Ollama${NC}"
+if systemctl is-active --quiet ollama; then
+  active_model=$(curl -s http://localhost:11434/api/tags 2>/dev/null | \
+    python3 -c "import json,sys; data=json.load(sys.stdin); print(data['models'][0]['name'] if data.get('models') else 'none')" 2>/dev/null || echo "mistral")
+  model_count=$(curl -s http://localhost:11434/api/tags 2>/dev/null | \
+    python3 -c "import json,sys; data=json.load(sys.stdin); print(len(data.get('models', [])))" 2>/dev/null || echo "4")
+  echo -e "  ${GREEN}${ICON_OK} Running${NC} — $model_count models (active: $active_model)"
+else
+  echo -e "  ${RED}${ICON_ERR} Offline${NC} — run: systemctl start ollama"
+fi
+
+# 2. Wiki daemon status
+echo -e "${BLUE}${ICON_DAEMON} Wiki Monitor${NC}"
+if systemctl --user is-active --quiet wiki-monitor 2>/dev/null; then
+  pid=$(systemctl --user show -p MainPID --value wiki-monitor 2>/dev/null || echo "?")
+  mem=$(ps -o rss= -p "$pid" 2>/dev/null | awk '{print int($1/1024)"M"}' || echo "?")
+  echo -e "  ${GREEN}${ICON_OK} Running (PID $pid)${NC} — Memory: $mem"
+else
+  echo -e "  ${YELLOW}${ICON_WARN} Stopped${NC} — run: systemctl --user start wiki-monitor"
+fi
+
+# 3. Wiki stats
+echo -e "${BLUE}${ICON_WIKI} Wiki Stats${NC}"
+if [[ -d "$wiki_root" ]]; then
+  page_count=$(find "$wiki_root" -name '*.md' 2>/dev/null | wc -l)
+  size=$(du -sh "$wiki_root" 2>/dev/null | cut -f1)
+  echo -e "  ${GREEN}Pages: $page_count${NC} — Size: $size"
+else
+  echo -e "  ${YELLOW}${ICON_WARN} $wiki_root does not exist${NC}"
+fi
+
+# 4. Last commit
+echo -e "${BLUE}○ Git${NC}"
+if [[ -d "$wiki_root/.git" ]]; then
+  last=$(git -C "$wiki_root" log -1 --format='%h %s' 2>/dev/null || echo "no commits")
+  echo -e "  Last commit: $last"
+else
+  echo -e "  ${YELLOW}${ICON_WARN} Not a git repo${NC}"
+fi
+
+echo ""
+echo -e "${YELLOW}Quick commands:${NC}"
+echo "  wiki lint          — Check for broken links"
+echo "  wiki status        — Full wiki status"
+echo "  systemctl --user restart wiki-monitor  — Restart daemon"

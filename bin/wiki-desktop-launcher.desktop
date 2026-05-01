@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Wiki Search
+Comment=Search your wiki and ask Ollama
+Icon=system-search
+Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-search-dialog
+Terminal=false
+Categories=Utility;Education;
+Keywords=wiki;search;notes;llm;ollama;
+StartupNotify=false

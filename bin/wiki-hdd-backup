@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# wiki-hdd-backup — run by udev when an external drive is plugged in.
+# Shows a zenity popup offering to back up ~/wiki/ to the drive.
+#
+# Triggered by: /etc/udev/rules.d/99-wiki-hdd-backup.rules
+# Also callable directly: wiki-hdd-backup [/mount/point]
+
+set -euo pipefail
+
+WIKI_ROOT="${HOME}/wiki"
+DISPLAY="${DISPLAY:-:0}"
+XAUTHORITY="${XAUTHORITY:-$HOME/.Xauthority}"
+export DISPLAY XAUTHORITY
+
+# Give the drive a moment to fully mount
+sleep 3
+
+# Find the mount point — either passed as arg or auto-detected
+if [[ $# -gt 0 ]]; then
+    MOUNT="$1"
+else
+    # Find the most recently mounted external drive
+    MOUNT=$(lsblk -rno MOUNTPOINT,TRAN 2>/dev/null | \
+        awk '$2 == "usb" && $1 != "" {print $1}' | head -1)
+fi
+
+[[ -z "$MOUNT" ]] && exit 0
+[[ ! -d "$MOUNT" ]] && exit 0
+
+DRIVE_LABEL=$(lsblk -rno LABEL,MOUNTPOINT 2>/dev/null | awk -v m="$MOUNT" '$2==m{print $1}' | head -1)
+DRIVE_LABEL="${DRIVE_LABEL:-External Drive}"
+
+WIKI_SIZE=$(du -sh "$WIKI_ROOT" 2>/dev/null | cut -f1)
+PAGE_COUNT=$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l)
+TIMESTAMP=$(date +%Y-%m-%d_%H%M)
+BACKUP_DEST="$MOUNT/wiki-backup-$TIMESTAMP"
+
+ANSWER=$(zenity --question \
+    --title="💾 External drive detected — backup wiki?" \
+    --text="<b>Drive connected:</b> $DRIVE_LABEL ($MOUNT)
+
+<b>Your wiki:</b> $PAGE_COUNT pages, $WIKI_SIZE
+
+Back up <tt>~/wiki/</tt> to:
+<tt>$BACKUP_DEST</tt>
+
+This takes less than a minute." \
+    --ok-label="Backup Now" \
+    --cancel-label="Skip" \
+    --width=460 \
+    2>/dev/null && echo "yes" || echo "no")
+
+if [[ "$ANSWER" == "yes" ]]; then
+    # Show progress
+    (
+        echo "10" ; echo "# Creating backup directory..."
+        mkdir -p "$BACKUP_DEST"
+        echo "30" ; echo "# Copying wiki files..."
+        rsync -a --progress "$WIKI_ROOT/" "$BACKUP_DEST/" 2>/dev/null
+        echo "90" ; echo "# Verifying backup..."
+        BACKED_UP=$(find "$BACKUP_DEST" -name '*.md' | wc -l)
+        echo "100" ; echo "# Done — $BACKED_UP pages backed up to $BACKUP_DEST"
+    ) | zenity --progress \
+        --title="Backing up wiki..." \
+        --text="Copying $PAGE_COUNT pages..." \
+        --percentage=0 \
+        --auto-close \
+        --width=400 \
+        2>/dev/null
+
+    zenity --info \
+        --title="✓ Wiki backed up" \
+        --text="<b>Backup complete!</b>
+
+$PAGE_COUNT pages saved to:
+<tt>$BACKUP_DEST</tt>
+
+Safe to unplug your drive." \
+        --width=380 \
+        2>/dev/null &
+fi

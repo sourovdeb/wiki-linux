@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# wiki-search-dialog — Desktop search box for wiki-linux
+#
+# Opens a zenity dialog, takes a question, searches wiki, then shows
+# the answer from the local LLM in a readable terminal window.
+#
+# Usage: Run directly, or bind to a keyboard shortcut in XFCE.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PYTHON="${WIKI_OS_PYTHON:-python3}"
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
+
+export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
+export WIKI_OS_CONFIG="$CONFIG"
+
+WIKI_ROOT="$($PYTHON -c "
+import json,pathlib,os
+p = os.environ.get('WIKI_OS_CONFIG','$CONFIG')
+with open(p) as f: c = json.load(f)
+print(pathlib.Path(c['wiki']['root']).expanduser().resolve())
+" 2>/dev/null || echo "$HOME/wiki")"
+
+# Choose mode from initial dialog
+MODE=$(zenity --list \
+    --title="Wiki-Linux" \
+    --text="What would you like to do?" \
+    --column="Mode" --column="Description" \
+    --width=420 --height=280 \
+    "Ask LLM"    "Ask a question — the AI searches your wiki and answers" \
+    "Search"     "Find pages in your wiki by keyword" \
+    "New Note"   "Create a new note and open it" \
+    "Status"     "Check daemon and Ollama status" \
+    2>/dev/null) || exit 0
+
+case "$MODE" in
+  "Ask LLM")
+    QUESTION=$(zenity --entry \
+        --title="Ask your wiki" \
+        --text="Ask anything — the AI will search your wiki and answer:" \
+        --width=500 \
+        2>/dev/null) || exit 0
+    [[ -z "$QUESTION" ]] && exit 0
+
+    xfce4-terminal \
+        --title="Wiki Answer: $QUESTION" \
+        --geometry=100x35 \
+        --command="bash -c '
+            export PYTHONPATH=\"$PROJECT_ROOT\"
+            export WIKI_OS_CONFIG=\"$CONFIG\"
+            echo \"Searching wiki and asking Ollama...\"
+            echo \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"
+            echo \"Question: $QUESTION\"
+            echo \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"
+            $PYTHON -m src.search \"$QUESTION\" 2>/dev/null || \
+              echo \"No results. Try: wiki ask \\\"$QUESTION\\\"\"
+            echo \"\"
+            echo \"Press Enter to close\"
+            read
+        '" &
+    ;;
+
+  "Search")
+    QUERY=$(zenity --entry \
+        --title="Search wiki" \
+        --text="Search for keywords in your wiki:" \
+        --width=500 \
+        2>/dev/null) || exit 0
+    [[ -z "$QUERY" ]] && exit 0
+
+    xfce4-terminal \
+        --title="Wiki Search: $QUERY" \
+        --geometry=120x40 \
+        --command="bash -c '
+            export PYTHONPATH=\"$PROJECT_ROOT\"
+            export WIKI_OS_CONFIG=\"$CONFIG\"
+            echo \"Searching wiki for: $QUERY\"
+            echo \"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\"
+            rg --color=always --heading -i \"$QUERY\" \"$WIKI_ROOT\" 2>/dev/null || \
+              echo \"No matches found for: $QUERY\"
+            echo \"\"
+            echo \"Press Enter to close\"
+            read
+        '" &
+    ;;
+
+  "New Note")
+    TITLE=$(zenity --entry \
+        --title="New Note" \
+        --text="Note title:" \
+        --width=400 \
+        2>/dev/null) || exit 0
+    [[ -z "$TITLE" ]] && exit 0
+
+    SLUG="$(echo "$TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')"
+    DATE="$(date +%Y-%m-%d)"
+    TARGET="$WIKI_ROOT/user/notes/${DATE}-${SLUG}.md"
+    mkdir -p "$(dirname "$TARGET")"
+
+    if [[ ! -f "$TARGET" ]]; then
+      cat > "$TARGET" <<TEMPLATE
+---
+title: $TITLE
+created: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+tags: []
+---
+
+# $TITLE
+
+TEMPLATE
+    fi
+
+    xfce4-terminal \
+        --title="Edit: $TITLE" \
+        --command="bash -c 'nvim \"$TARGET\"; echo Press\ Enter\ to\ close; read'" &
+    ;;
+
+  "Status")
+    STATUS_OUT="$($SCRIPT_DIR/wiki-status-panel 2>/dev/null || echo 'Status unavailable')"
+    zenity --info \
+        --title="Wiki-Linux Status" \
+        --text="$STATUS_OUT" \
+        --width=500 --height=300 \
+        2>/dev/null &
+    ;;
+esac

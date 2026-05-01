@@ -1,0 +1,12 @@
+# /etc/udev/rules.d/99-wiki-hdd-backup.rules
+# Triggers a wiki backup popup when an external USB drive is plugged in.
+#
+# INSTALL (requires sudo):
+#   sudo cp etc/udev-wiki-hdd-backup.rules /etc/udev/rules.d/99-wiki-hdd-backup.rules
+#   sudo udevadm control --reload-rules
+#
+# Note: The wiki-hdd-backup.service must be enabled first:
+#   systemctl --user enable wiki-hdd-backup.service
+
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{DEVTYPE}=="partition", \
+    RUN+="/bin/systemctl --user start wiki-hdd-backup.service"

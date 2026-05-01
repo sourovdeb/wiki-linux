@@ -1,0 +1,9 @@
+[Unit]
+Description=Wiki-Linux HDD backup popup
+Documentation=file://%h/wiki-linux/README.md
+
+[Service]
+Type=oneshot
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+ExecStart=%h/wiki-linux/bin/wiki-hdd-backup

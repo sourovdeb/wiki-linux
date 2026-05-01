@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# wiki-panel-status — xfce4-genmon plugin script
+#
+# Shows a one-line status for the XFCE panel:
+#   ◉ mistral | wiki:12p | ✓ daemon
+#
+# To use with xfce4-genmon:
+#   1. Install: sudo pacman -S xfce4-genmon-plugin
+#   2. Add "Generic Monitor" to your XFCE panel
+#   3. Set command to: /path/to/wiki-panel-status
+#   4. Set period: 60 seconds
+
+set -euo pipefail
+
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
+
+WIKI_ROOT="$(python3 -c "
+import json,pathlib,os
+p = '$CONFIG'
+try:
+  with open(p) as f: c = json.load(f)
+  print(pathlib.Path(c['wiki']['root']).expanduser().resolve())
+except:
+  print(os.path.expanduser('~/wiki'))
+" 2>/dev/null || echo "$HOME/wiki")"
+
+# Ollama status
+if systemctl is-active --quiet ollama 2>/dev/null; then
+  MODEL=$(python3 -c "
+import urllib.request, json
+try:
+  r = urllib.request.urlopen('http://localhost:11434/api/tags', timeout=2)
+  d = json.loads(r.read())
+  m = d['models'][0]['name'].split(':')[0] if d.get('models') else 'no model'
+  print(m)
+except:
+  print('offline')
+" 2>/dev/null || echo "?")
+  OLLAMA_STATUS="◆ $MODEL"
+else
+  OLLAMA_STATUS="◆ offline"
+fi
+
+# Wiki page count
+PAGES=$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l || echo 0)
+
+# Daemon status
+if systemctl --user is-active --quiet wiki-monitor 2>/dev/null; then
+  DAEMON="✓ wiki"
+else
+  DAEMON="✗ wiki"
+fi
+
+# Output for genmon (one-line format)
+echo "$OLLAMA_STATUS | ${PAGES}p | $DAEMON"

@@ -2,5 +2,8 @@
   "legacyEditor": false,
   "livePreview": true,
   "defaultViewMode": "preview",
-  "attachmentFolderPath": "_tmp"
+  "attachmentFolderPath": "_tmp",
+  "alwaysUpdateLinks": true,
+  "showUnsupportedFiles": true,
+  "uriCallbacks": true
 }

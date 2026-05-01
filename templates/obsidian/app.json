@@ -1,0 +1,11 @@
+{
+  "legacyEditor": false,
+  "livePreview": true,
+  "defaultViewMode": "preview",
+  "attachmentFolderPath": "_tmp",
+  "newLinkFormat": "relative",
+  "useMarkdownLinks": false,
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "folder",
+  "newFileFolderPath": "user/notes"
+}

@@ -4,10 +4,11 @@
   "wiki": {
     "root": "~/wiki",
     "dirs": {
-      "system": "system",
-      "user":   "user",
-      "meta":   "_meta",
-      "tmp":    "_tmp"
+      "system":  "system",
+      "user":    "user",
+      "meta":    "_meta",
+      "tmp":     "_tmp",
+      "archive": "_archive"
     }
   },
 
@@ -66,6 +67,25 @@
     "tui_viewer": "mdt",
     "renderer":   "glow",
     "editor":     "nvim"
+  },
+
+  "fix": {
+    "doc_roots": [
+      "~/wiki",
+      "~/.cache/wiki-linux/archwiki"
+    ],
+    "max_snippets":  8,
+    "snippet_bytes": 2000
+  },
+
+  "obsidian": {
+    "vault_path":    "~/wiki",
+    "config_dir":    "~/.config/obsidian",
+    "plugins": [
+      "obsidian-git",
+      "dataview",
+      "templater-obsidian"
+    ]
   },
 
   "logging": {

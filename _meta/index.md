@@ -1,15 +1,16 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 16:43 UTC
+updated: 2026-05-01 17:56 UTC
 ---
 
 # Wiki Index
 
-*24 pages — last rebuilt 2026-05-01 16:43 UTC*
+*25 pages — last rebuilt 2026-05-01 17:56 UTC*
 
 ## Root
 
 - [[GUIDE|Guide]]
+- [[HOW-TO-USE-DAILY|How to Use Wiki-Linux Daily]]  `guide` `daily` `quick-reference`
 - [[START-HERE|Start Here]]  `start` `guide`
 - [[README|Wiki Index]]  `home` `index`
 

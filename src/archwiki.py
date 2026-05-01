@@ -41,7 +41,7 @@ USER_AGENT = "wiki-linux/1.0 (personal wiki cache; +https://github.com/sourovdeb
 
 def _slug(title: str) -> str:
     """Convert a page title to a safe filename stem."""
-    return re.sub(r"[^\w\-]", "-", title.lower().strip()).strip("-")
+    return re.sub(r"[^\w]+", "-", title.lower().strip()).strip("-")
 
 
 def _cache_dir() -> Path:
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     path = fetch_page(title)
     if path:
         print(f"Cached: {path}")
-        if "glow" in __import__("shutil").which("glow") or "":
+        if __import__("shutil").which("glow"):
             import subprocess
             subprocess.run(["glow", str(path)], check=False)
     else:

@@ -232,6 +232,20 @@ declare -A PLUGIN_REPOS=(
   ["templater-obsidian"]="SilentVoid13/Templater"
 )
 
+# Helper: extract a named asset's download URL from a GitHub releases JSON blob.
+# Usage: _gh_asset_url "$release_json" "$asset_name"
+_gh_asset_url() {
+  local json="$1" name="$2"
+  echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for a in data.get('assets', []):
+    if a['name'] == sys.argv[1]:
+        print(a['browser_download_url'])
+        break
+" "$name" 2>/dev/null || true
+}
+
 for plugin_id in "${!PLUGIN_REPOS[@]}"; do
   repo="${PLUGIN_REPOS[$plugin_id]}"
   plugin_dest="$PLUGIN_DIR/$plugin_id"
@@ -244,7 +258,7 @@ for plugin_id in "${!PLUGIN_REPOS[@]}"; do
   warn "Fetching plugin $plugin_id from $repo..."
   mkdir -p "$plugin_dest"
 
-  # Get the latest release download URL for main.js via GitHub API.
+  # Get the latest release download URL via GitHub API.
   api_url="https://api.github.com/repos/${repo}/releases/latest"
   release_json=$(curl -fsSL --max-time 15 "$api_url" 2>/dev/null || echo "")
 
@@ -254,16 +268,7 @@ for plugin_id in "${!PLUGIN_REPOS[@]}"; do
   fi
 
   for asset in main.js manifest.json styles.css; do
-    asset_url=$(echo "$release_json" \
-      | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for a in data.get('assets', []):
-    if a['name'] == sys.argv[1]:
-        print(a['browser_download_url'])
-        break
-" "$asset" 2>/dev/null || true)
-
+    asset_url=$(_gh_asset_url "$release_json" "$asset")
     if [[ -n "$asset_url" ]]; then
       curl -fsSL --max-time 30 -o "$plugin_dest/$asset" "$asset_url" 2>/dev/null \
         && ok "  Downloaded $plugin_id/$asset" \
@@ -283,7 +288,8 @@ done
 OBSIDIAN_GLOBAL_CFG="$HOME/.config/obsidian/obsidian.json"
 mkdir -p "$(dirname "$OBSIDIAN_GLOBAL_CFG")"
 if [[ ! -f "$OBSIDIAN_GLOBAL_CFG" ]]; then
-  ts_ms=$(date +%s%3N)
+  # Millisecond timestamp: portable across Linux and macOS.
+  ts_ms=$(python3 -c "import time; print(int(time.time() * 1000))")
   cat > "$OBSIDIAN_GLOBAL_CFG" <<JSON
 {
   "vaults": {

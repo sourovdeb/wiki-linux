@@ -26,9 +26,9 @@ def test_slug_spaces_and_caps():
 
 def test_slug_special_chars():
     from src.archwiki import _slug
-    # "C++ build tools" → "c++ build tools" → replace non-word chars with "-"
-    # Each '+' and the space each become '-', yielding 'c---build-tools'.
-    assert _slug("C++ build tools") == "c---build-tools"
+    # Consecutive non-word characters are collapsed into a single hyphen.
+    # "C++ build tools" → "c++ build tools" → "c-build-tools"
+    assert _slug("C++ build tools") == "c-build-tools"
 
 
 def test_cache_dir_respects_config(tmp_path, monkeypatch):
@@ -69,7 +69,8 @@ def test_fetch_page_writes_cache(tmp_path, monkeypatch):
     assert result.exists()
     content = result.read_text()
     assert "Arch Linux" in content
-    assert "wiki.archlinux.org" in content
+    # Verify the canonical Arch Wiki URL is present (not just any substring).
+    assert "https://wiki.archlinux.org/title/" in content
     assert fake_body.strip() in content
 
 

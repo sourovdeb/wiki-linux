@@ -200,7 +200,10 @@ mkdir -p "$SYSTEMD_DIR"
 
 for unit in wiki-monitor.service wiki-sync.service wiki-sync.timer; do
   cp "$PROJECT_ROOT/systemd/$unit" "$SYSTEMD_DIR/$unit"
-  ok "Installed $unit"
+  # Patch the placeholder path to the actual project root.
+  # Source files use %h/wiki-linux; the repo may live anywhere under $HOME.
+  sed -i "s|%h/wiki-linux|$PROJECT_ROOT|g" "$SYSTEMD_DIR/$unit"
+  ok "Installed $unit → patched paths to $PROJECT_ROOT"
 done
 
 systemctl --user daemon-reload

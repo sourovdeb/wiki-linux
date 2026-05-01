@@ -216,6 +216,7 @@ LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
 chmod +x "$PROJECT_ROOT/bin/wiki"
 chmod +x "$PROJECT_ROOT/bin/wiki-notify"
+chmod +x "$PROJECT_ROOT/bin/wiki-welcome"
 
 if [[ -L "$LOCAL_BIN/wiki" ]]; then
   ok "wiki symlink already exists"
@@ -229,6 +230,32 @@ if [[ -L "$LOCAL_BIN/wiki-notify" ]]; then
 else
   ln -s "$PROJECT_ROOT/bin/wiki-notify" "$LOCAL_BIN/wiki-notify"
   ok "Symlinked bin/wiki-notify → $LOCAL_BIN/wiki-notify"
+fi
+
+# wiki-welcome autostart
+AUTOSTART_DIR="$HOME/.config/autostart"
+mkdir -p "$AUTOSTART_DIR"
+if [[ -L "$LOCAL_BIN/wiki-welcome" ]]; then
+  ok "wiki-welcome symlink already exists"
+else
+  ln -s "$PROJECT_ROOT/bin/wiki-welcome" "$LOCAL_BIN/wiki-welcome"
+  ok "Symlinked bin/wiki-welcome → $LOCAL_BIN/wiki-welcome"
+fi
+if [[ -f "$AUTOSTART_DIR/wiki-welcome.desktop" ]]; then
+  ok "wiki-welcome autostart already exists"
+else
+  cat > "$AUTOSTART_DIR/wiki-welcome.desktop" << DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Wiki-Linux Welcome
+Comment=Shows wiki-linux quick-start popup at login
+Exec=$LOCAL_BIN/wiki-welcome
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+X-XFCE-Autostart-Override=true
+DESKTOP
+  ok "Created wiki-welcome autostart entry"
 fi
 
 # Warn if ~/.local/bin is not in PATH.

@@ -16,7 +16,7 @@ from pathlib import Path
 
 # The canonical config location. Override with WIKI_OS_CONFIG env var,
 # which is useful for testing without touching the real config.
-DEFAULT_CONFIG_PATH = Path.home() / ".config" / "wiki-os" / "config.json"
+DEFAULT_CONFIG_PATH = Path.home() / ".config" / "wiki-linux" / "config.json"
 FALLBACK_CONFIG_PATH = Path(__file__).parent.parent / "config.json"
 
 

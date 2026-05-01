@@ -1,6 +1,6 @@
 [Unit]
-Description=Wiki-OS file monitor daemon
-Documentation=file://%h/wiki-os/README.md
+Description=Wiki-Linux file monitor daemon
+Documentation=file://%h/wiki-linux/README.md
 # Start after the user's graphical session or basic login session is up.
 After=default.target
 # If Ollama is managed as a user service, uncomment the next line:
@@ -9,10 +9,10 @@ After=default.target
 [Service]
 Type=simple
 # The daemon runs as the login user — no root, no special capabilities.
-ExecStart=%h/wiki-os/.venv/bin/python3 -m src.monitor
-WorkingDirectory=%h/wiki-os
-Environment=WIKI_OS_CONFIG=%h/.config/wiki-os/config.json
-Environment=PYTHONPATH=%h/wiki-os
+ExecStart=%h/wiki-linux/.venv/bin/python3 -m src.monitor
+WorkingDirectory=%h/wiki-linux
+Environment=WIKI_OS_CONFIG=%h/.config/wiki-linux/config.json
+Environment=PYTHONPATH=%h/wiki-linux
 
 # Restart on failure with a 10-second delay.
 # This handles the case where Ollama is not yet running when the monitor starts.

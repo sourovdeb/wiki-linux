@@ -187,7 +187,7 @@ Add a `wiki` alias and a `cdwiki` shortcut. These are the only OS-level
 "wiki commands" the user needs to remember.
 
 ```bash
-WIKI_RC_LINE='# wiki-os shortcuts
+WIKI_RC_LINE='# wiki-linux shortcuts
 alias wiki="cd $HOME/wiki && ls"
 cdwiki() { cd "$HOME/wiki/${1:-}"; }
 export WIKI_ROOT="$HOME/wiki"'

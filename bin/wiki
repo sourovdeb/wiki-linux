@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# bin/wiki — Wiki-OS unified command-line interface.
+# bin/wiki — Wiki-Linux unified command-line interface.
 #
 # This script is the single entry point for interacting with the wiki from
 # the terminal. It dispatches to Python modules, system tools (Obsidian, mdt,
 # glow, git), and systemd depending on the subcommand. Add new subcommands
 # as case branches; no Python changes required for purely shell operations.
 #
-# Install: ln -s "$HOME/wiki-os/bin/wiki" "$HOME/.local/bin/wiki"
+# Install: ln -s "$HOME/wiki-linux/bin/wiki" "$HOME/.local/bin/wiki"
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 PYTHON="${WIKI_OS_PYTHON:-python3}"
-CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-os/config.json}"
+CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
 
 # Read WIKI_ROOT from config using python one-liner to avoid bash JSON parsing.
 WIKI_ROOT="$($PYTHON -c "
@@ -33,7 +33,7 @@ export WIKI_OS_CONFIG="$CONFIG"
 # --- Helpers ---
 _usage() {
   cat <<EOF
-Wiki-OS — wiki-native knowledge layer for Arch Linux
+Wiki-Linux — wiki-native knowledge layer for Arch Linux
 
 Usage: wiki <subcommand> [args]
 
@@ -48,6 +48,7 @@ Subcommands:
   serve                Start the monitor daemon in the foreground (for debugging)
   config               Print the resolved configuration
   help                 Show this message
+  lint                 Check for broken links in the wiki
 
 Examples:
   wiki new "Pacman cheatsheet"
@@ -56,6 +57,22 @@ Examples:
   wiki sync
 EOF
 }
+
+# --- Main dispatch ---
+case "${1:-help}" in
+  new) shift; cmd_new "$@";;
+  open) shift; cmd_open "$@";;
+  search) shift; cmd_search "$@";;
+  ask) shift; cmd_ask "$@";;
+  status) cmd_status;;
+  sync) cmd_sync;;
+  reprocess) shift; cmd_reprocess "$@";;
+  serve) cmd_serve;;
+  config) cmd_config;;
+  lint) cmd_lint;;
+  help|--help|-h) _usage;;
+  *) _usage; exit 1;;
+esac
 
 _require() {
   command -v "$1" &>/dev/null || {
@@ -141,31 +158,27 @@ cmd_ask() {
 
 # --- Subcommand: status ---
 cmd_status() {
-  echo "=== Wiki Status ==="
-  echo "Root: $WIKI_ROOT"
-  echo ""
+  # Get daemon PID
+  local pid
+  pid="$(systemctl --user show wiki-monitor.service --property=MainPID --value 2>/dev/null || echo 0)"
 
-  # Page count.
-  local count
-  count="$(find "$WIKI_ROOT" -name '*.md' | wc -l)"
-  echo "Pages: $count"
-  echo ""
+  # Wiki page count + size
+  local count size
+  count="$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l)"
+  size="$(du -sh "$WIKI_ROOT" 2>/dev/null | cut -f1 || echo '?')"
 
-  # Git status.
-  if [[ -d "$WIKI_ROOT/.git" ]]; then
-    echo "=== Git Status ==="
-    git -C "$WIKI_ROOT" status --short
-    echo ""
-    echo "=== Recent Commits ==="
-    git -C "$WIKI_ROOT" log --oneline -10
-  else
-    echo "(Wiki is not yet a git repository. Run 'wiki sync' to initialise.)"
-  fi
+  # Last sync time
+  local last_sync
+  last_sync="$(git -C "$WIKI_ROOT" log -1 --format='%ci' 2>/dev/null || echo 'never')"
 
-  echo ""
-  echo "=== Daemon Status ==="
-  systemctl --user status wiki-monitor.service --no-pager 2>/dev/null \
-    || echo "Monitor service not running or not installed."
+  # Git remote
+  local remote
+  remote="$(git -C "$WIKI_ROOT" remote get-url origin 2>/dev/null || echo 'none')"
+
+  echo "Daemon status: $([ "$pid" -gt 0 ] 2>/dev/null && echo "running (PID $pid)" || echo "stopped")"
+  echo "Wiki size: $count pages, $size"
+  echo "Last sync: $last_sync"
+  echo "Git remote: origin ($remote)"
 }
 
 # --- Subcommand: sync ---
@@ -182,27 +195,8 @@ cmd_reprocess() {
     echo "File not found: $file" >&2
     exit 1
   fi
-  echo "Asking the LLM to regenerate the wiki page for: $file"
-  $PYTHON -c "
-from pathlib import Path
-from datetime import datetime, timezone
-from src.config import cfg
-from src import llm
-from src.monitor import record_self_write
-
-wiki_root = Path(cfg['wiki']['root'])
-source = Path('$file')
-ts = datetime.now(timezone.utc).isoformat()
-page = llm.generate_wiki_page(source, wiki_root, ts)
-if page:
-    target = wiki_root / page['target_path']
-    target.parent.mkdir(parents=True, exist_ok=True)
-    record_self_write(target)
-    target.write_text(page['content'])
-    print(f'Written: {target}')
-else:
-    print('LLM returned no page. Check the daemon log.')
-"
+  echo "Archiving and reprocessing: $file"
+  $PYTHON -m src.ingest --reprocess "$file"
 }
 
 # --- Subcommand: serve (foreground daemon for debugging) ---
@@ -213,34 +207,28 @@ cmd_serve() {
 
 # --- Subcommand: config ---
 cmd_config() {
-  echo "Config file: $CONFIG"
-  echo ""
-  $PYTHON -c "
-import json, os
-with open(os.environ['WIKI_OS_CONFIG']) as f:
-    print(json.dumps(json.load(f), indent=2))
-"
+  echo "Opening config file in read-only mode: $CONFIG"
+  less "$CONFIG"
 }
 
-# --- Dispatch ---
-subcommand="${1:-help}"
-shift || true
+# --- Subcommand: lint ---
+cmd_lint() {
+  echo "Checking for broken links..."
+  $PYTHON -m src.lint
+}
 
-case "$subcommand" in
-  new)        cmd_new "$@" ;;
-  open)       cmd_open "$@" ;;
-  search)     cmd_search "$@" ;;
-  ask)        cmd_ask "$@" ;;
-  status)     cmd_status ;;
-  sync)       cmd_sync ;;
-  reprocess)  cmd_reprocess "$@" ;;
-  serve)      cmd_serve "$@" ;;
-  config)     cmd_config ;;
-  help|--help|-h) _usage ;;
-  *)
-    echo "Unknown subcommand: $subcommand"
-    echo ""
-    _usage
-    exit 1
-    ;;
+# --- Main dispatch ---
+case "${1:-help}" in
+  new) shift; cmd_new "$@";;
+  open) shift; cmd_open "$@";;
+  search) shift; cmd_search "$@";;
+  ask) shift; cmd_ask "$@";;
+  status) cmd_status;;
+  sync) cmd_sync;;
+  reprocess) shift; cmd_reprocess "$@";;
+  serve) cmd_serve;;
+  config) cmd_config;;
+  lint) cmd_lint;;
+  help|--help|-h) _usage;;
+  *) _usage; exit 1;;
 esac

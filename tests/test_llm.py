@@ -28,30 +28,28 @@ def source_file(tmp_path: Path) -> Path:
 
 
 def _make_response(payload: dict):
-    """GenerateResponse-like object — ollama >= 0.4.0 uses attributes not dict keys."""
-    obj = MagicMock()
-    obj.response = json.dumps(payload)
-    return obj
+    """The real client returns a dict, not an object."""
+    return {"response": json.dumps(payload)}
 
 
 def _make_bad_response(text: str):
     """Simulate malformed (non-JSON) LLM output."""
-    obj = MagicMock()
-    obj.response = text
-    return obj
+    return {"response": text}
 
 
 def test_valid_path_accepted(monkeypatch, wiki_root, source_file):
     from src import llm
     monkeypatch.setattr(llm, "cfg", {"ollama": {"context_limit_bytes": 8000}})
-    fake = MagicMock(return_value=_make_response({
+    mock_client = MagicMock()
+    mock_client.generate.return_value = _make_response({
         "target_path": "system/config/fake.conf.md",
         "title": "Fake Config",
         "content": "---\ntitle: Fake\n---\n# Fake",
         "links": [],
-    }))
-    with patch("src.llm.ollama.generate", fake):
-        result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
+    })
+    monkeypatch.setattr(llm, "_get_client", lambda: mock_client)
+
+    result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
     assert result is not None
     assert result["target_path"] == "system/config/fake.conf.md"
 
@@ -59,58 +57,69 @@ def test_valid_path_accepted(monkeypatch, wiki_root, source_file):
 def test_path_escape_rejected(monkeypatch, wiki_root, source_file):
     from src import llm
     monkeypatch.setattr(llm, "cfg", {"ollama": {"context_limit_bytes": 8000}})
-    fake = MagicMock(return_value=_make_response({
+    mock_client = MagicMock()
+    mock_client.generate.return_value = _make_response({
         "target_path": "../../etc/passwd.md",
         "title": "Pwned",
         "content": "evil",
         "links": [],
-    }))
-    with patch("src.llm.ollama.generate", fake):
-        result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
+    })
+    monkeypatch.setattr(llm, "_get_client", lambda: mock_client)
+
+    result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
     assert result is None, "Path escape was not rejected!"
 
 
 def test_absolute_path_rejected(monkeypatch, wiki_root, source_file):
     from src import llm
     monkeypatch.setattr(llm, "cfg", {"ollama": {"context_limit_bytes": 8000}})
-    fake = MagicMock(return_value=_make_response({
+    mock_client = MagicMock()
+    mock_client.generate.return_value = _make_response({
         "target_path": "/etc/shadow.md",
         "title": "Pwned",
         "content": "evil",
         "links": [],
-    }))
-    with patch("src.llm.ollama.generate", fake):
-        result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
+    })
+    monkeypatch.setattr(llm, "_get_client", lambda: mock_client)
+
+    result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
     assert result is None
 
 
 def test_malformed_json_returns_none(monkeypatch, wiki_root, source_file):
     from src import llm
     monkeypatch.setattr(llm, "cfg", {"ollama": {"context_limit_bytes": 8000}})
-    fake = MagicMock(return_value=_make_bad_response("not valid json {{{"))
-    with patch("src.llm.ollama.generate", fake):
-        result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
+    mock_client = MagicMock()
+    mock_client.generate.return_value = _make_bad_response("not valid json {{{")
+    monkeypatch.setattr(llm, "_get_client", lambda: mock_client)
+
+    result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
     assert result is None
 
 
 def test_missing_required_keys_returns_none(monkeypatch, wiki_root, source_file):
     from src import llm
     monkeypatch.setattr(llm, "cfg", {"ollama": {"context_limit_bytes": 8000}})
-    fake = MagicMock(return_value=_make_response({"title": "no path"}))
-    with patch("src.llm.ollama.generate", fake):
-        result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
+    mock_client = MagicMock()
+    mock_client.generate.return_value = _make_response({"title": "no path"})
+    monkeypatch.setattr(llm, "_get_client", lambda: mock_client)
+
+    result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
     assert result is None
 
 
 def test_non_md_extension_appended(monkeypatch, wiki_root, source_file):
     from src import llm
     monkeypatch.setattr(llm, "cfg", {"ollama": {"context_limit_bytes": 8000}})
-    fake = MagicMock(return_value=_make_response({
+    mock_client = MagicMock()
+    mock_client.generate.return_value = _make_response({
         "target_path": "system/config/no-extension",
         "content": "page body",
         "title": "test",
-    }))
-    with patch("src.llm.ollama.generate", fake):
-        result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
+        "links": [],
+    })
+    monkeypatch.setattr(llm, "_get_client", lambda: mock_client)
+
+    result = llm.generate_wiki_page(source_file, wiki_root, "2026-05-01T00:00:00Z")
     assert result is not None
-    assert result["target_path"].endswith(".md")
+    assert result["target_path"] == "system/config/no-extension.md"

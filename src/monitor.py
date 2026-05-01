@@ -1,5 +1,5 @@
 """
-src/monitor.py — Core inotify daemon for Wiki-OS.
+src/monitor.py — Core inotify daemon for Wiki-Linux.
 
 This is the daemon's main event loop. It watches ~/wiki, ~/notes, and the
 /etc allowlist with inotify, and for each relevant file change calls llm.py
@@ -39,6 +39,25 @@ from src.config import cfg
 from src import llm, indexer
 
 log = logging.getLogger("wiki.monitor")
+
+def setup_logging(log_path: Path | None = None, level: int = logging.INFO) -> None:
+    """Configure root logger to console and optionally a rotating file."""
+    log.setLevel(level)
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)-5.5s] %(name)s: %(message)s"
+    )
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    log.addHandler(console_handler)
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_path, maxBytes=10 * 1024 * 1024, backupCount=5
+        )
+        file_handler.setFormatter(formatter)
+        log.addHandler(file_handler)
 
 # Events we care about: CLOSE_WRITE fires when a write FD is closed (safer
 # than IN_MODIFY which fires mid-write). CREATE catches new files. MOVED_TO
@@ -219,7 +238,7 @@ def run(dry_run: bool = False, once: bool = False) -> None:
     # Watch /etc paths (read-only, observation only).
     _watch_etc_allowlist(inotify, wd_map)
 
-    log.info("Wiki-OS monitor started. Watching %d paths.", len(wd_map))
+    log.info("Wiki-Linux monitor started. Watching %d paths.", len(wd_map))
 
     # Build an initial index on startup so _meta/ is populated immediately.
     indexer.rebuild(wiki_root)
@@ -259,37 +278,27 @@ def run(dry_run: bool = False, once: bool = False) -> None:
                 return
 
     inotify.close()
-    log.info("Wiki-OS monitor stopped.")
+    log.info("Wiki-Linux monitor stopped.")
 
 
-def _configure_logging() -> None:
-    level_name = cfg.get("logging", {}).get("level", "INFO")
-    level = getattr(logging, level_name, logging.INFO)
+def main() -> None:
+    """Entry point for the daemon."""
+    parser = argparse.ArgumentParser(description="Wiki-Linux inotify monitor daemon")
+    parser.add_argument("--dry-run", action="store_true", help="Log actions but don't write files")
+    parser.add_argument("--once", action="store_true", help="Run one event loop pass and exit")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    args = parser.parse_args()
 
-    log_file = cfg.get("logging", {}).get("file", "")
-    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    log_file = Path(cfg.get("monitor", {}).get("log_file", "")).expanduser()
+    setup_logging(log_file, log_level)
 
-    if log_file:
-        log_path = Path(log_file).expanduser()
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        handlers.append(logging.handlers.RotatingFileHandler(
-            log_path, maxBytes=5 * 1024 * 1024, backupCount=3
-        ))
+    log.info("--- Wiki-Linux monitor starting up ---")
+    log.info("Config: %s", cfg.get("config_path"))
+    log.info("Wiki root: %s", cfg.get("wiki", {}).get("root"))
 
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
-        handlers=handlers,
-    )
+    run(dry_run=args.dry_run, once=args.once)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Wiki-OS file monitor daemon")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Log events without calling the LLM or writing files.")
-    parser.add_argument("--once", action="store_true",
-                        help="Process one event then exit (for integration testing).")
-    args = parser.parse_args()
-
-    _configure_logging()
-    run(dry_run=args.dry_run, once=args.once)
+    main()

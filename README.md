@@ -56,7 +56,7 @@ wiki-linux/
 ├── CODESPACES_INTERNAL.md   ← internal Codespaces environment facts
 ├── SUPPORT_POPUP.md         ← wiki-notify popup helper
 ├── LICENSE                  ← MIT
-├── config.json              ← configuration (copy to ~/.config/wiki-os/)
+├── config.json              ← configuration (copy to ~/.config/wiki-linux/)
 ├── install.sh               ← idempotent installer
 ├── requirements.txt         ← Python deps
 ├── bin/wiki                 ← CLI dispatcher
@@ -128,7 +128,7 @@ your own writing.
 
 ## Configuration
 
-Copy `config.json` to `~/.config/wiki-os/config.json` and edit:
+Copy `config.json` to `~/.config/wiki-linux/config.json` and edit:
 
 ```jsonc
 {

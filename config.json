@@ -1,5 +1,5 @@
 {
-  "_comment": "Wiki-OS configuration. Copy to ~/.config/wiki-os/config.json and edit.",
+  "_comment": "Wiki-Linux configuration. Copy to ~/.config/wiki-linux/config.json and edit.",
 
   "wiki": {
     "root": "~/wiki",
@@ -27,6 +27,7 @@
       "~/wiki",
       "~/notes"
     ],
+    "log_file": "~/.cache/wiki-linux/monitor.log",
     "etc_allowlist": [
       "/etc/pacman.conf",
       "/etc/fstab",

@@ -25,7 +25,7 @@ The project is deliberately minimal. When in doubt, prefer fewer lines over more
 ## Repository Layout
 
 ```
-wiki-os/
+wiki-linux/
 ├── CLAUDE.md                ← you are here
 ├── AGENTS.md                ← same purpose, OpenAI Codex format
 ├── README.md                ← human documentation (what and why)

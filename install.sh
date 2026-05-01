@@ -10,7 +10,7 @@
 set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="$HOME/.config/wiki-os"
+CONFIG_DIR="$HOME/.config/wiki-linux"
 CONFIG_FILE="$CONFIG_DIR/config.json"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
 WIKI_ROOT="$HOME/wiki"
@@ -22,6 +22,45 @@ ok()   { echo -e "${GREEN}✓${NC} $*"; }
 warn() { echo -e "${YELLOW}!${NC} $*"; }
 fail() { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 step() { echo -e "\n${YELLOW}▶${NC} $*"; }
+
+# ── Uninstall ─────────────────────────────────────────────────────────────────
+uninstall() {
+  step "Uninstalling wiki-linux"
+  systemctl --user stop wiki-monitor.service wiki-sync.timer
+  systemctl --user disable wiki-monitor.service wiki-sync.timer
+  rm -f "$SYSTEMD_DIR/wiki-monitor.service"
+  rm -f "$SYSTEMD_DIR/wiki-sync.service"
+  rm -f "$SYSTEMD_DIR/wiki-sync.timer"
+  systemctl --user daemon-reload
+  ok "Systemd units removed"
+
+  rm -rf "$CONFIG_DIR"
+  ok "Config directory removed: $CONFIG_DIR"
+
+  # We don't remove the wiki itself, just the code and config.
+  warn "The wiki at $WIKI_ROOT has not been touched."
+  warn "To remove it, delete the directory manually."
+
+  ok "Uninstall complete."
+  exit 0
+}
+
+# ── Reconfigure ───────────────────────────────────────────────────────────────
+reconfigure() {
+  step "Reconfiguring wiki-linux"
+  rm -f "$CONFIG_FILE"
+  ok "Removed config file: $CONFIG_FILE"
+  # The rest of the script will now run as if it's a first install.
+}
+
+
+# --- Main install logic ---
+if [[ "${1:-}" == "--uninstall" ]]; then
+  uninstall
+fi
+if [[ "${1:-}" == "--reconfigure" ]]; then
+  reconfigure
+fi
 
 # ── 1. System packages ────────────────────────────────────────────────────────
 step "Checking system packages"
@@ -59,6 +98,21 @@ else
   ok "mdt already installed"
 fi
 
+# Check if Ollama is running (non-fatal — may not be installed on this OS)
+step "Checking Ollama service"
+if command -v ollama &>/dev/null; then
+  if ollama ps &>/dev/null 2>&1; then
+    ok "Ollama is running."
+  else
+    warn "Ollama is installed but not running."
+    warn "Start it with: systemctl --user enable --now ollama"
+    warn "Then pull your model: ollama pull mistral"
+  fi
+else
+  warn "Ollama not found. Install from https://ollama.com"
+  warn "After install, run: ollama pull mistral"
+fi
+
 # ── 2. Python virtual environment ─────────────────────────────────────────────
 step "Setting up Python virtual environment"
 
@@ -71,7 +125,7 @@ fi
 
 "$VENV/bin/pip" install --quiet --upgrade pip
 "$VENV/bin/pip" install --quiet \
-  "ollama>=0.3" \
+  "ollama>=0.4.0" \
   "inotify_simple>=1.3" \
   "pyyaml>=6.0" \
   "jinja2>=3.1"
@@ -89,8 +143,10 @@ else
   cp "$PROJECT_ROOT/config.json" "$CONFIG_FILE"
   # Patch WIKI_ROOT to use the actual home directory path.
   sed -i "s|~/wiki|$WIKI_ROOT|g" "$CONFIG_FILE"
-  ok "Config copied to $CONFIG_FILE"
+  chmod 0444 "$CONFIG_FILE"  # lock per EXPECTATIONS Guarantee 1
+  ok "Config copied to $CONFIG_FILE (read-only — use --reconfigure to edit)"
   warn "Review $CONFIG_FILE and adjust ollama.model, git.remote, etc."
+  warn "To edit: bash install.sh --reconfigure"
 fi
 
 # ── 4. Wiki directory structure ───────────────────────────────────────────────
@@ -104,7 +160,9 @@ mkdir -p \
   "$WIKI_ROOT/user/projects" \
   "$WIKI_ROOT/user/research" \
   "$WIKI_ROOT/_meta" \
-  "$WIKI_ROOT/_tmp"
+  "$WIKI_ROOT/_meta/tasks" \
+  "$WIKI_ROOT/_tmp" \
+  "$WIKI_ROOT/_archive"
 
 ok "Wiki structure created at $WIKI_ROOT"
 
@@ -114,7 +172,7 @@ if [[ ! -d "$WIKI_ROOT/.git" ]]; then
   echo "_tmp/" > "$WIKI_ROOT/.gitignore"
   echo "*.log"  >> "$WIKI_ROOT/.gitignore"
   git -C "$WIKI_ROOT" add .gitignore
-  git -C "$WIKI_ROOT" commit -m "init: Wiki-OS initial commit"
+  git -C "$WIKI_ROOT" commit -m "init: wiki-linux initial commit"
   ok "Git repository initialised in $WIKI_ROOT"
 else
   ok "Git repository already exists"
@@ -197,7 +255,7 @@ fi
 # ── 8. Done ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN} Wiki-OS installation complete!${NC}"
+echo -e "${GREEN} wiki-linux installation complete!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "Next steps:"

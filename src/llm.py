@@ -1,5 +1,5 @@
 """
-src/llm.py — Ollama API wrapper for Wiki-OS.
+src/llm.py — Ollama API wrapper for Wiki-Linux.
 
 All LLM interaction goes through this module. The Ollama Python client is used
 exclusively; subprocess calls to the `ollama` binary are never made. Every call
@@ -20,6 +20,19 @@ import ollama
 from src.config import cfg
 
 log = logging.getLogger("wiki.llm")
+
+
+_client: ollama.Client | None = None
+
+
+def _get_client() -> ollama.Client:
+    """Lazy module-level Client so tests can monkey-patch it cleanly."""
+    global _client
+    if _client is None:
+        timeout = cfg.get("ollama", {}).get("timeout_seconds", 30)
+        _client = ollama.Client(timeout=timeout)
+    return _client
+
 
 # The schema the model must follow. Documented in the prompt so the model
 # understands the purpose of each field, not just the names.
@@ -94,37 +107,39 @@ def generate_wiki_page(
     model = cfg.get("ollama", {}).get("model", "mistral")
     temperature = cfg.get("ollama", {}).get("temperature", 0.2)
     num_ctx = cfg.get("ollama", {}).get("num_ctx", 4096)
-    timeout = cfg.get("ollama", {}).get("timeout_seconds", 30)
 
     try:
-        response = ollama.generate(
+        response = _get_client().generate(
             model=model,
             system=SYSTEM_PROMPT,
             prompt=prompt,
             format="json",
-            options={"temperature": temperature, "num_ctx": num_ctx},
-            stream=False,
+            options={
+                "temperature": temperature,
+                "num_ctx": num_ctx,
+            },
         )
+        # The ollama client uses .response, not .content
+        # It's a string that needs to be parsed.
+        data = json.loads(response["response"])
+    except ollama.ResponseError as e:
+        log.error("Ollama API error: %s", e.error)
+        return None
+    except json.JSONDecodeError:
+        log.warning("Ollama returned non-JSON: %s", response.get("response", "EMPTY"))
+        return None
     except Exception as e:
-        log.error("Ollama call failed for %s: %s", source_path, e)
+        log.error("LLM call failed: %s", e)
         return None
 
-    # --- Parse and validate response ---
-    # ollama >= 0.4.0 returns a GenerateResponse object (attribute access).
-    # Older versions returned a plain dict. Support both defensively.
-    try:
-        raw = response.response if hasattr(response, "response") else response["response"]
-        data = json.loads(raw)
-    except (KeyError, AttributeError, json.JSONDecodeError) as e:
-        log.warning("Malformed LLM response for %s: %s", source_path, e)
-        return None
-
-    # Validate required keys exist and have the right types.
-    if not isinstance(data.get("target_path"), str):
-        log.warning("LLM response missing valid target_path for %s", source_path)
-        return None
-    if not isinstance(data.get("content"), str):
-        log.warning("LLM response missing valid content for %s", source_path)
+    # --- Validate response ---
+    if not (
+        isinstance(data.get("target_path"), str)
+        and isinstance(data.get("title"), str)
+        and isinstance(data.get("content"), str)
+        and isinstance(data.get("links"), list)
+    ):
+        log.warning("LLM response missing required keys for %s", source_path)
         return None
 
     # Security: the target path must resolve inside wiki_root.
@@ -176,7 +191,7 @@ def answer_question(question: str, snippets: list[dict]) -> str:
 
     model = cfg.get("ollama", {}).get("model", "mistral")
     try:
-        response = ollama.generate(
+        response = _get_client().generate(
             model=model,
             system=system,
             prompt=prompt,

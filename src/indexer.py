@@ -1,5 +1,5 @@
 """
-src/indexer.py — Wiki index generator for Wiki-OS.
+src/indexer.py — Wiki index generator for Wiki-Linux.
 
 Rebuilds _meta/index.md and _meta/recent.md by walking the wiki tree
 and reading YAML frontmatter from each page. Called by the monitor after
@@ -62,6 +62,10 @@ def rebuild(wiki_root: Path) -> None:
     _meta/index.md and _meta/recent.md. Files under _meta/ and _tmp/ are
     excluded from the index to avoid self-referential loops.
     """
+    if not wiki_root.is_dir():
+        log.error("Wiki root '%s' not found, cannot build index.", wiki_root)
+        return
+
     meta_dir = wiki_root / cfg["wiki"]["dirs"].get("meta", "_meta")
     tmp_dir  = wiki_root / cfg["wiki"]["dirs"].get("tmp",  "_tmp")
     meta_dir.mkdir(parents=True, exist_ok=True)

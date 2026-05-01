@@ -262,7 +262,7 @@ if (-not (Test-Path $obsidianCfg)) {
 ```powershell
 $profileLine = @"
 
-# wiki-os shortcuts
+# wiki-linux shortcuts
 \$env:WIKI_ROOT = "$WikiRoot"
 function wiki   { Set-Location \$env:WIKI_ROOT }
 function cdwiki { param(\$sub) Set-Location (Join-Path \$env:WIKI_ROOT \$sub) }

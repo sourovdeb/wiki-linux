@@ -49,7 +49,7 @@ containment.
 │   └── _archive/                  ← Deleted files go here (NOT destroyed)
 │
 ├── .config/                       ← Your system config folder (Arch convention)
-│   └── wiki-os/                   ← NEW — wiki daemon config
+│   └── wiki-linux/                   ← NEW — wiki daemon config
 │       └── config.json            ← settings (LOCKED — see below)
 │
 ├── .local/bin/                    ← Custom executables
@@ -64,7 +64,7 @@ containment.
 ### Key Observation
 
 - **`~/wiki/`** is the **only** new folder the daemon touches
-- **`~/.config/wiki-os/config.json`** is the **only** config it reads
+- **`~/.config/wiki-linux/config.json`** is the **only** config it reads
 - *Everything else in your home* stays untouched
 - **`/etc`, `/usr/`, `/var/`, `/root/`** are never written to (read-only)
 
@@ -149,7 +149,7 @@ reads here. They don't fight.
 
 ```bash
 $ systemctl --user status wiki-monitor
-● wiki-monitor.service - Wiki-OS file monitor daemon
+● wiki-monitor.service - Wiki-Linux file monitor daemon
      Loaded: loaded (/etc/systemd/user/wiki-monitor.service; enabled; vendor preset: disabled)
      Active: active (running) since Wed 2026-05-01 10:15:00 UTC; 5h ago
    Main PID: 12345 (python3)
@@ -158,11 +158,11 @@ $ systemctl --user status wiki-monitor
     CGroup: /user.slice/user-1000.slice/user@1000.service/app.slice/wiki-monitor.service
             └─12345 /home/user/wiki-linux/.venv/bin/python3 -m src.monitor
 
-May 01 10:15:00 arch-box systemd[815]: Started Wiki-OS file monitor daemon.
+May 01 10:15:00 arch-box systemd[815]: Started Wiki-Linux file monitor daemon.
 May 01 15:23:45 arch-box wiki-monitor[12345]: INGEST /etc/pacman.conf → wiki/system/config/pacman.conf.md
 May 01 15:24:02 arch-box wiki-monitor[12345]: ✓ Ingest complete: 487 words written
 
-$ tail -f ~/.local/share/wiki-os/monitor.log
+$ tail -f ~/.local/share/wiki-linux/monitor.log
 [INFO] 2026-05-01T15:23:45 inotify event: CLOSE_WRITE wiki/system/config/pacman.conf.md
 [INFO] 2026-05-01T15:23:45 Debounce suppression: self-write (5 sec window active)
 ```
@@ -208,7 +208,7 @@ Everything up-to-date
 ## Part 4 — What You'll See After Setup (Changes Only)
 
 ```
-~NEW~ ~/.config/wiki-os/
+~NEW~ ~/.config/wiki-linux/
   └── config.json  (LOCKED — explained below)
 
 ~NEW~ ~/wiki/
@@ -235,12 +235,12 @@ Everything up-to-date
 
 ### Guarantee 1: Config Files Are Read-Only (Filesystem Lock)
 
-**File:** `~/.config/wiki-os/config.json`
+**File:** `~/.config/wiki-linux/config.json`
 
 **Protection:**
 ```bash
 # After install, this is the permission:
-ls -l ~/.config/wiki-os/config.json
+ls -l ~/.config/wiki-linux/config.json
 -r--r--r-- 1 user user  2048 May 01 10:00 config.json
          ↑
     read-only for owner
@@ -249,9 +249,9 @@ ls -l ~/.config/wiki-os/config.json
 # Even if daemon crashes with write request, OS rejects it.
 
 # To edit it, you must explicitly:
-chmod u+w ~/.config/wiki-os/config.json
-$EDITOR ~/.config/wiki-os/config.json
-chmod u-r ~/.config/wiki-os/config.json  # re-lock
+chmod u+w ~/.config/wiki-linux/config.json
+$EDITOR ~/.config/wiki-linux/config.json
+chmod u-r ~/.config/wiki-linux/config.json  # re-lock
 
 # OR use: install-time script (kept for rollback)
 bash ~/wiki-linux/install.sh --reconfigure
@@ -411,9 +411,9 @@ yourusername 12345  0.0  1.2  ...  python3 -m src.monitor
 **The Lock Chain:**
 
 ```
-~/.config/wiki-os/config.json  (read-only: u-w)
+~/.config/wiki-linux/config.json  (read-only: u-w)
     ↓ daemon reads (cannot modify)
-~/.local/share/wiki-os/monitor.log  (append-only, owned by daemon)
+~/.local/share/wiki-linux/monitor.log  (append-only, owned by daemon)
     ↓ daemon writes here, nowhere else
 ~/wiki/  (git-tracked, recoverable)
     ↓ git history
@@ -428,8 +428,8 @@ GitHub remote (backed up off-machine)
 
 ```bash
 # Try to write to config (should fail):
-echo '{}' > ~/.config/wiki-os/config.json
-bash: ~/.config/wiki-os/config.json: Permission denied
+echo '{}' > ~/.config/wiki-linux/config.json
+bash: ~/.config/wiki-linux/config.json: Permission denied
 
 # Try to write to /etc (should fail):
 echo 'hack' > /etc/pacman.conf
@@ -486,7 +486,7 @@ bash ~/wiki-linux/install.sh --uninstall
 
 # What it does:
 # - Disables systemd units
-# - Removes ~/.config/wiki-os/
+# - Removes ~/.config/wiki-linux/
 # - Leaves ~/wiki/ untouched (it's just markdown files + git)
 # - Leaves /etc/ untouched (it was never modified)
 
@@ -506,7 +506,7 @@ git -C ~/wiki log --oneline
 |---|---|---|
 | `~/wiki/user/` | You write notes here | Git history |
 | `~/wiki/system/config/*.md` | LLM writes mirrors | Git history |
-| `~/.bashrc` | You may add `source ~/.config/wiki-os/init.sh` | You own it |
+| `~/.bashrc` | You may add `source ~/.config/wiki-linux/init.sh` | You own it |
 
 ### Intentionally Read-Only (Immutable)
 
@@ -527,7 +527,7 @@ Print this. Post it on your wall.
 GUARANTEE CHECKLIST
 
 ☐ Config locked read-only
-  → chmod u-w ~/.config/wiki-os/config.json
+  → chmod u-w ~/.config/wiki-linux/config.json
 
 ☐ /etc/ never written
   → Read-only by design (one-way inotify)
@@ -594,7 +594,7 @@ diff /tmp/etc-hashes-before.txt /tmp/etc-hashes-after.txt
 
 ```bash
 # All operations logged:
-tail -100 ~/.local/share/wiki-os/monitor.log
+tail -100 ~/.local/share/wiki-linux/monitor.log
 
 # All wiki changes in git:
 git -C ~/wiki log -p -- wiki/system/config/ | less
@@ -607,7 +607,7 @@ git -C ~/wiki log -p -- wiki/system/config/ | less
 
 | Category | What You See | What's Protected | How |
 |---|---|---|---|
-| **Folders** | `~/wiki/` + `~/.config/wiki-os/` | `/etc/`, `/usr/`, `/root/` | Read-only by daemon design |
+| **Folders** | `~/wiki/` + `~/.config/wiki-linux/` | `/etc/`, `/usr/`, `/root/` | Read-only by daemon design |
 | **Files** | Markdown notes + config.json | config.json (read-only) | `chmod u-w` + OS enforces |
 | **Tools** | `wiki` CLI, Obsidian, Git, terminal | None (tools are safe) | Used by you, not daemon |
 | **Data** | Notes in `~/wiki/` | Full history in `.git/` | Git tracks all changes |

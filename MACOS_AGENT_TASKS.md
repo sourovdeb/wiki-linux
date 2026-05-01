@@ -203,7 +203,7 @@ cat > "$PLIST" <<EOF
   <key>WorkingDirectory</key><string>$HOME/wiki-linux</string>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>WIKI_OS_CONFIG</key><string>$HOME/.config/wiki-os/config.json</string>
+    <key>WIKI_OS_CONFIG</key><string>$HOME/.config/wiki-linux/config.json</string>
     <key>PYTHONPATH</key><string>$HOME/wiki-linux</string>
   </dict>
   <key>RunAtLoad</key><true/>

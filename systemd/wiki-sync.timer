@@ -1,6 +1,6 @@
 [Unit]
-Description=Wiki-OS git auto-commit timer
-Documentation=file://%h/wiki-os/README.md
+Description=Wiki-Linux git auto-commit timer
+Documentation=file://%h/wiki-linux/README.md
 
 [Timer]
 # Run 5 minutes after login, then every 5 minutes thereafter.

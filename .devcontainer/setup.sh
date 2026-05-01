@@ -25,7 +25,7 @@ echo "✓ Dependencies installed"
 
 # 3. Create config
 echo "[3/5] Setting up configuration..."
-CONFIG_DIR="$HOME/.config/wiki-os"
+CONFIG_DIR="$HOME/.config/wiki-linux"
 mkdir -p "$CONFIG_DIR"
 
 if [ ! -f "$CONFIG_DIR/config.json" ]; then

@@ -1,13 +1,13 @@
 ---
 title: Recently Changed
-updated: 2026-05-01 19:52 UTC
+updated: 2026-05-01 20:21 UTC
 ---
 
 # Recently Changed
 
 - [[HOW-TO-USE-DAILY|How to Use Wiki-Linux Daily]] — 2026-05-01
 - [[WIKI-TOOLS/DAILY-GUIDE|How to Use Wiki-Linux Daily]] — 2026-05-01
-- [[user/notes/my-day|my day]] — 2026-05-01
+- [[user/notes/my-day|My Day]] — 2026-05-01
 - [[system/config/mkinitcpio.conf|mkinitcpio.conf]] — 2026-04-30 21:58:48.684285+00:00
 - [[system/config/makepkg.conf|makepkg.conf]] — 2026-04-30 21:58:48.681848+00:00
 - [[system/config/ssh/sshd_config|sshd_config]] — 2026-04-30 21:58:48.679550+00:00

@@ -102,8 +102,8 @@
       "enabled": true,
       "isBuiltIn": true,
       "capabilities": [
-        "vision",
-        "reasoning"
+        "reasoning",
+        "vision"
       ]
     },
     {
@@ -132,8 +132,8 @@
       "enabled": false,
       "isBuiltIn": true,
       "capabilities": [
-        "vision",
-        "reasoning"
+        "reasoning",
+        "vision"
       ]
     },
     {
@@ -142,8 +142,8 @@
       "enabled": false,
       "isBuiltIn": true,
       "capabilities": [
-        "vision",
-        "reasoning"
+        "reasoning",
+        "vision"
       ]
     },
     {
@@ -229,8 +229,8 @@
       "enabled": false,
       "isBuiltIn": true,
       "capabilities": [
-        "vision",
-        "reasoning"
+        "reasoning",
+        "vision"
       ]
     },
     {
@@ -239,8 +239,8 @@
       "enabled": false,
       "isBuiltIn": true,
       "capabilities": [
-        "vision",
-        "reasoning"
+        "reasoning",
+        "vision"
       ]
     },
     {
@@ -249,8 +249,8 @@
       "enabled": false,
       "isBuiltIn": true,
       "capabilities": [
-        "vision",
-        "reasoning"
+        "reasoning",
+        "vision"
       ]
     },
     {
@@ -294,6 +294,21 @@
       "capabilities": [
         "reasoning"
       ]
+    },
+    {
+      "name": "mistral",
+      "provider": "ollama",
+      "enabled": true,
+      "isBuiltIn": false,
+      "baseUrl": "",
+      "apiKey": "",
+      "isEmbeddingModel": false,
+      "capabilities": [
+        "websearch",
+        "reasoning"
+      ],
+      "stream": true,
+      "displayName": ""
     }
   ],
   "activeEmbeddingModels": [

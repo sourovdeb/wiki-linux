@@ -1,11 +1,15 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 19:40 UTC
+updated: 2026-05-01 19:46 UTC
 ---
 
 # Wiki Index
 
-*30 pages — last rebuilt 2026-05-01 19:40 UTC*
+*48 pages — last rebuilt 2026-05-01 19:46 UTC*
+
+## Bmo
+
+- [[BMO/Profiles/BMO|Bmo]]
 
 ## Wiki-Tools
 
@@ -14,6 +18,24 @@ updated: 2026-05-01 19:40 UTC
 - [[WIKI-TOOLS/DAILY-GUIDE|How to Use Wiki-Linux Daily]]  `guide` `daily` `quick-reference`
 - [[WIKI-TOOLS/SETUP-KEYBOARD-SHORTCUT|Setup Keyboard Shortcut]]
 - [[WIKI-TOOLS/START-HERE|Start Here]]  `start` `guide`
+
+## Copilot
+
+- [[copilot/copilot-custom-prompts/Clip Web Page|Clip Web Page]]
+- [[copilot/copilot-custom-prompts/Clip YouTube Transcript|Clip Youtube Transcript]]
+- [[copilot/copilot-custom-prompts/Emojify|Emojify]]
+- [[copilot/copilot-custom-prompts/Explain like I am 5|Explain Like I Am 5]]
+- [[copilot/copilot-custom-prompts/Fix grammar and spelling|Fix Grammar And Spelling]]
+- [[copilot/copilot-custom-prompts/Generate glossary|Generate Glossary]]
+- [[copilot/copilot-custom-prompts/Generate table of contents|Generate Table Of Contents]]
+- [[copilot/copilot-custom-prompts/Make longer|Make Longer]]
+- [[copilot/copilot-custom-prompts/Make shorter|Make Shorter]]
+- [[copilot/copilot-custom-prompts/Remove URLs|Remove Urls]]
+- [[copilot/copilot-custom-prompts/Rewrite as tweet|Rewrite As Tweet]]
+- [[copilot/copilot-custom-prompts/Rewrite as tweet thread|Rewrite As Tweet Thread]]
+- [[copilot/copilot-custom-prompts/Simplify|Simplify]]
+- [[copilot/copilot-custom-prompts/Summarize|Summarize]]
+- [[copilot/copilot-custom-prompts/Translate to Chinese|Translate To Chinese]]
 
 ## Root
 
@@ -49,5 +71,7 @@ updated: 2026-05-01 19:40 UTC
 - [[user/projects|Projects]]  `space`
 - [[user/research/README|Research]]  `space`
 - [[user/research|Research]]  `space`
+- [[user/development/tools/copilot/copilot-custom-prompts/Summarize|Summarize]]
 - [[user/README|User Space]]  `space`
 - [[user/projects/wiki-linux|Wiki-OS Project]]  `project` `wiki-os`
+- [[user/notes/my-day|my day]]

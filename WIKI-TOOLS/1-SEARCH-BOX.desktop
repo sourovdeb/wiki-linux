@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=🔍 Wiki Search & Ask
+Comment=Search wiki or ask Ollama a question
+Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-search-dialog
+Icon=system-search
+Type=Application
+Terminal=false

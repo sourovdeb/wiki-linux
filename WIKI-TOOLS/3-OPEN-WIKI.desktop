@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=📚 Open Wiki Folder
+Comment=Browse your wiki in file manager
+Exec=xdg-open /home/sourov/wiki
+Icon=folder-documents
+Type=Application
+Terminal=false

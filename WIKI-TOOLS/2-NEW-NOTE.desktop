@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=📝 New Note
+Comment=Create a new wiki note
+Exec=bash -c 'TITLE=$(zenity --entry --title="New Note" --text="Note title:"); slug=$(echo "$TITLE" | tr "[:upper:]" "[:lower:]" | tr " " "-"); TARGET="$HOME/wiki/user/notes/$(date +%Y-%m-%d)-${slug}.md"; mkdir -p "$(dirname $TARGET)"; [ ! -f "$TARGET" ] && echo -e "---\ntitle: $TITLE\ncreated: $(date -u +%Y-%m-%dT%H:%M:%SZ)\ntags: []\n---\n\n# $TITLE\n" > "$TARGET"; xfce4-terminal --command="nvim $TARGET"'
+Icon=text-editor
+Type=Application
+Terminal=false

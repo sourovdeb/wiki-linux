@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=🔎 Lint Wiki
+Comment=Check wiki for broken links and stale pages
+Exec=xfce4-terminal --title="Wiki Lint" --command="bash -c 'export PYTHONPATH=/home/sourov/Documents/wiki-linux/wiki-linux; export WIKI_OS_CONFIG=/home/sourov/.config/wiki-linux/config.json; python3 -m src.lint; read -p \"Press Enter\"'"
+Icon=dialog-warning
+Type=Application
+Terminal=false

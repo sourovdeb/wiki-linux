@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Record + Transcribe
+Comment=Record audio, transcribe with whisper, save to wiki
+Exec=xfce4-terminal -e /home/sourov/.local/bin/wiki-transcribe
+Icon=audio-input-microphone
+Terminal=false

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=◉ Wiki Status
+Comment=Check daemon, Ollama, and git status
+Exec=xfce4-terminal --title="Wiki Status" --command="bash -c '/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-status-panel; read -p \"Press Enter to close\"'"
+Icon=utilities-system-monitor
+Type=Application
+Terminal=false

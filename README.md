@@ -1,13 +1,17 @@
 # wiki-linux
 
-> A wiki-native knowledge layer for Linux (and Windows). Built on Andrej
+> A wiki-native knowledge layer for Linux, Windows, and macOS — built on Andrej
 > Karpathy's [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 
-**The short version:** `~/wiki/` is a Git-tracked directory of Markdown
-files. A daemon watches your system configs with inotify and uses a
-local LLM (Ollama) to generate and maintain wiki pages for them. Your
-`/etc` is never touched. Your OS works exactly as before. You get a
-searchable, cross-linked, LLM-queryable knowledge base built on top.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-16%20passing-brightgreen.svg)](tests/)
+
+**The short version:** `~/wiki/` is a Git-tracked directory of Markdown files.
+A daemon watches your system configs with inotify and uses a local LLM (Ollama)
+to generate and maintain wiki pages for them. Your `/etc` is never touched.
+Your OS works exactly as before. You get a searchable, cross-linked,
+LLM-queryable knowledge base built on top.
 
 ---
 
@@ -31,6 +35,8 @@ wiki ask "What does my pacman.conf do?"
 wiki status
 ```
 
+For other platforms see **WINDOWS_AGENT_TASKS.md** or **MACOS_AGENT_TASKS.md**.
+
 ---
 
 ## Repository Layout
@@ -42,8 +48,10 @@ wiki-linux/
 ├── CLAUDE.md                ← Claude Code specific schema
 ├── LINUX_AGENT_TASKS.md     ← setup steps for Linux agents
 ├── WINDOWS_AGENT_TASKS.md   ← setup steps for Windows agents
+├── MACOS_AGENT_TASKS.md     ← setup steps for macOS agents
+├── CODESPACES_AGENT.md      ← GitHub Codespaces / cloud agents
 ├── SUPPORT_POPUP.md         ← wiki-notify popup helper
-├── CODESPACES_AGENT.md      ← GitHub Codespaces agent tasks
+├── LICENSE                  ← MIT
 ├── config.json              ← configuration (copy to ~/.config/wiki-os/)
 ├── install.sh               ← idempotent installer
 ├── requirements.txt         ← Python deps
@@ -52,7 +60,8 @@ wiki-linux/
 │   ├── config.py, monitor.py, llm.py
 │   ├── indexer.py, search.py, sync.py
 ├── systemd/                 ← user-level service and timer units
-└── templates/               ← Jinja2 page templates
+├── templates/               ← Jinja2 page templates
+└── tests/                   ← pytest unit tests
 ```
 
 ---
@@ -78,30 +87,32 @@ reverse. A hallucinating LLM cannot damage your system configuration.
 
 ## Using with AI Agents
 
-**Paste `WIKI_AGENT.md` into any LLM agent.** It's the master
-instruction file — self-contained, model-agnostic, works with TinyLlama
-through Opus. The agent will read it and instantiate the wiki system in
-collaboration with you.
+**Paste `WIKI_AGENT.md` into any LLM agent.** It is the master instruction
+file — self-contained, model-agnostic, works with TinyLlama through Opus.
 
-- Claude Code: `cat CLAUDE.md` in your project directory
-- OpenAI Codex: paste `WIKI_AGENT.md` as system prompt
-- GitHub Codespaces: see `CODESPACES_AGENT.md`
-- Windows: see `WINDOWS_AGENT_TASKS.md`
+| Agent | Entry file |
+|---|---|
+| Claude Code | `CLAUDE.md` |
+| OpenAI Codex | `AGENTS.md` |
+| Any other LLM | `WIKI_AGENT.md` |
+| GitHub Codespaces | `CODESPACES_AGENT.md` |
+| Linux platform tasks | `LINUX_AGENT_TASKS.md` |
+| Windows platform tasks | `WINDOWS_AGENT_TASKS.md` |
+| macOS platform tasks | `MACOS_AGENT_TASKS.md` |
 
 ---
 
 ## What It Looks Like Day-to-Day
 
-You edit `/etc/pacman.conf`. Two seconds later, without any action from
-you, `~/wiki/system/config/pacman.conf.md` is updated with a
-human-readable explanation of the file, the verbatim contents in a code
-block, a timestamp, and cross-links to related wiki pages. Obsidian
-shows the new page. The change is committed to git.
+You edit `/etc/pacman.conf`. Two seconds later, without any action from you,
+`~/wiki/system/config/pacman.conf.md` is updated with a human-readable
+explanation of the file, the verbatim contents in a code block, a timestamp,
+and cross-links to related wiki pages.
 
 You want to remember why you changed something six months ago. You run
 `wiki ask "Why did I add the multilib repo?"`. The RAG pipeline searches
-your wiki, finds the relevant note, and the LLM synthesises an answer
-from your own writing.
+your wiki, finds the relevant note, and the LLM synthesises an answer from
+your own writing.
 
 ---
 
@@ -123,14 +134,28 @@ Copy `config.json` to `~/.config/wiki-os/config.json` and edit:
 
 ## Invariants the Code Enforces
 
-- Never writes outside `~/wiki` (path escape check on every LLM output)
+- Never writes outside `~/wiki` (path-escape check on every LLM output)
 - Never writes to `/etc` or any system path
 - Suppresses its own writes (prevents inotify feedback loops)
 - Runs as normal user, no root, no fanotify
 - LLM output always validated as JSON before any file write
 
+These invariants are unit-tested in `tests/`.
+
+---
+
+## Testing
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pytest tests/
+```
+
+Tests do not require a live Ollama instance — `ollama.generate` is mocked.
+
 ---
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE)

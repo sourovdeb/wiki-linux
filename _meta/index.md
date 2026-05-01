@@ -1,11 +1,11 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 18:21 UTC
+updated: 2026-05-01 18:26 UTC
 ---
 
 # Wiki Index
 
-*25 pages — last rebuilt 2026-05-01 18:21 UTC*
+*25 pages — last rebuilt 2026-05-01 18:26 UTC*
 
 ## Root
 

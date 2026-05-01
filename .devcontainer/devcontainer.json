@@ -1,0 +1,37 @@
+{
+  "name": "wiki-linux",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/ripgrep:1": {}
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "eamodio.gitlens",
+        "yzhang.markdown-all-in-one",
+        "foam.foam-vscode"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "[markdown]": {
+          "editor.defaultFormatter": "yzhang.markdown-all-in-one"
+        }
+      }
+    }
+  },
+  "forwardPorts": [8080, 11434],
+  "portsAttributes": {
+    "8080": {
+      "label": "Application"
+    },
+    "11434": {
+      "label": "Ollama API"
+    }
+  }
+}

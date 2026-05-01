@@ -1,0 +1,23 @@
+#!/bin/bash
+# Brightness control script for XFCE panel
+
+# Get current brightness
+CURRENT=$(brightnessctl get)
+MAX=$(brightnessctl max)
+PERCENT=$((CURRENT * 100 / MAX))
+
+# Show dialog with slider
+NEW_PERCENT=$(zenity --scale \
+    --title="🌞 Brightness Control" \
+    --text="Current: ${PERCENT}%" \
+    --value=$PERCENT \
+    --min-value=10 \
+    --max-value=100 \
+    --step=5 2>/dev/null)
+
+if [[ -n "$NEW_PERCENT" ]]; then
+    # Calculate new brightness value
+    NEW_VALUE=$((MAX * NEW_PERCENT / 100))
+    brightnessctl set "$NEW_VALUE"
+    notify-send "Brightness" "Set to ${NEW_PERCENT}%" -i display-brightness
+fi

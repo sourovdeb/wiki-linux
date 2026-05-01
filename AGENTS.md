@@ -7,8 +7,10 @@
 > 1. `WIKI_AGENT.md` — the philosophy (Karpathy's pattern + our adaptations)
 > 2. `AGENT_PLAYBOOK.md` — the explicit step-by-step script (works for
 >    TinyLlama through Opus)
-> 3. This file (`AGENTS.md`) — the schema specific to this repo
-> 4. The platform task file matching the user's OS
+> 3. `EXPECTATIONS.md` — current expected behaviour / acceptance criteria
+> 4. This file (`AGENTS.md`) — the schema specific to this repo
+> 5. The platform task file matching the user's OS (`LINUX_AGENT_TASKS.md`,
+>    `WINDOWS_AGENT_TASKS.md`, or `MACOS_AGENT_TASKS.md`)
 >
 > **For non-technical users:** read `SKILL_FLOOR.md` instead.
 
@@ -33,8 +35,10 @@ wiki-linux/
 ├── WIKI_AGENT.md            ← master idea file (copy into any LLM agent)
 ├── AGENTS.md                ← you are here (Codex / agent schema)
 ├── CLAUDE.md                ← same schema for Claude Code
+├── EXPECTATIONS.md          ← acceptance criteria and expected behaviour
 ├── LINUX_AGENT_TASKS.md     ← concrete Arch/Debian setup steps
 ├── WINDOWS_AGENT_TASKS.md   ← Windows 10/11 setup steps (safe version)
+├── MACOS_AGENT_TASKS.md     ← macOS setup steps
 ├── SUPPORT_POPUP.md         ← wiki-notify helper (all platforms)
 ├── CODESPACES_AGENT.md      ← cloud / GitHub Codespaces agent tasks
 ├── README.md                ← human documentation
@@ -42,22 +46,42 @@ wiki-linux/
 ├── install.sh               ← idempotent installer (Arch/Debian)
 ├── requirements.txt         ← Python dependencies
 ├── bin/
-│   └── wiki                 ← bash CLI dispatcher
+│   ├── wiki                 ← bash CLI dispatcher
+│   ├── wiki-notify          ← desktop notification helper
+│   ├── wiki-welcome         ← first-run welcome screen
+│   ├── wiki-hdd-backup      ← HDD backup trigger
+│   ├── wiki-panel-status    ← tray/panel status display
+│   ├── wiki-status-panel    ← alternative status panel
+│   └── wiki-search-dialog   ← GUI search dialog
 ├── src/
 │   ├── __init__.py
 │   ├── config.py            ← loads config.json, expands paths
-│   ├── monitor.py           ← inotify daemon (main daemon entry point)
+│   ├── monitor.py           ← inotify daemon (main entry point)
 │   ├── llm.py               ← Ollama API wrapper, JSON output
 │   ├── indexer.py           ← rebuilds _meta/index.md and recent.md
 │   ├── search.py            ← ripgrep + RAG search
-│   └── sync.py              ← git auto-commit and push
+│   ├── sync.py              ← git auto-commit and push
+│   ├── ingest.py            ← ingest source files into wiki pages
+│   ├── archive.py           ← move pages to _archive/ with timestamp
+│   ├── fix.py               ← RAG-grounded troubleshooting assistant
+│   ├── lint.py              ← broken wikilink checker
+│   ├── tasklog.py           ← append-only audit log (_meta/log.md)
+│   └── agent/
+│       └── ingest.py        ← auto-organiser for messy home dirs
 ├── systemd/
 │   ├── wiki-monitor.service ← user-level service for monitor.py
 │   ├── wiki-sync.service    ← one-shot git commit service
-│   └── wiki-sync.timer      ← fires wiki-sync.service every 5 min
-└── templates/
-    ├── system_config.md     ← Jinja2 template for /etc mirror pages
-    └── new_page.md          ← Jinja2 template for new user pages
+│   ├── wiki-sync.timer      ← fires wiki-sync.service every 5 min
+│   └── wiki-hdd-backup.service ← triggered by udev on HDD connect
+├── templates/
+│   ├── system_config.md     ← Jinja2 template for /etc mirror pages
+│   ├── source_summary.md    ← Jinja2 template for ingested source files
+│   └── new_page.md          ← Jinja2 template for new user pages
+├── tests/                   ← pytest unit tests (mock Ollama/inotify)
+├── etc/
+│   ├── install-udev.sh      ← installs HDD-backup udev rule
+│   └── udev-wiki-hdd-backup.rules
+└── .devcontainer/           ← GitHub Codespaces / dev container config
 ```
 
 ---
@@ -116,6 +140,7 @@ Do not use: `fanotify`, `pyinotify`, `watchdog`, `requests` (ollama client cover
 ## Build Order (if implementing from scratch)
 
 `config.py` → `llm.py` → `monitor.py` → `indexer.py` → `search.py`
+→ `sync.py` → `ingest.py` → `archive.py` → `lint.py` → `tasklog.py` → `fix.py`
 → `bin/wiki` → `install.sh` → systemd units
 
 ---

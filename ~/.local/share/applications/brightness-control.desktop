@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Brightness
+Comment=Adjust screen brightness
+Exec=/home/sourov/bin/brightness-control
+Icon=display-brightness
+Terminal=false
+Type=Application
+Categories=Settings;
+StartupWMClass=Brightness

@@ -1,0 +1,48 @@
+#!/bin/bash
+# Night light control script for XFCE panel
+
+# Check if redshift is installed
+if ! command -v redshift &> /dev/null; then
+    zenity --error --text="Redshift not installed. Install with:\nsudo pacman -S redshift" --width=300 2>/dev/null
+    exit 1
+fi
+
+# Check if night light is running
+if pgrep -x "redshift" > /dev/null; then
+    # Night light is on - offer to turn off
+    ACTION=$(zenity --list \
+        --title="🌙 Night Light Control" \
+        --column="Option" \
+        "Turn Off Night Light" \
+        "Adjust Temperature" \
+        --width=300 --height=200 2>/dev/null)
+
+    if [[ "$ACTION" == "Turn Off Night Light" ]]; then
+        pkill redshift
+        notify-send "Night Light" "Turned off" -i weather-clear-night
+    elif [[ "$ACTION" == "Adjust Temperature" ]]; then
+        TEMP=$(zenity --scale \
+            --title="Adjust Night Light" \
+            --text="Current: 3500K" \
+            --value=3500 \
+            --min-value=2700 \
+            --max-value=5500 \
+            --step=100 2>/dev/null)
+        if [[ -n "$TEMP" ]]; then
+            pkill redshift
+            redshift -O "$TEMP" &
+            notify-send "Night Light" "Set to ${TEMP}K" -i weather-clear-night
+        fi
+    fi
+else
+    # Night light is off - offer to turn on
+    zenity --question \
+        --title="🌙 Night Light Control" \
+        --text="Turn on Night Light?\nRecommended: 3500K for reduced eye strain" \
+        --width=300 2>/dev/null
+
+    if [[ $? -eq 0 ]]; then
+        redshift -O 3500 &
+        notify-send "Night Light" "Turned on (3500K)" -i weather-clear-night
+    fi
+fi

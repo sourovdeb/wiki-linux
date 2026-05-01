@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Toleria
+Comment=Wiki Markdown Editor
+Exec=/home/sourov/.local/bin/tolaria
+Icon=text-x-markdown
+Terminal=false
+Type=Application
+Categories=Office;TextEditor;
+StartupWMClass=Toleria
+Path=/home/sourov/wiki
+MimeType=text/markdown;
+Keywords=wiki;notes;markdown;knowledge;

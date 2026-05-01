@@ -1,0 +1,105 @@
+#!/bin/bash
+# integrate-folders - Create symlinks to integrate Documents and Downloads with wiki
+
+set -euo pipefail
+
+echo "🔗 Setting up folder integration between wiki and home directories..."
+
+# Create directories if they don't exist
+mkdir -p ~/wiki/user/documents
+mkdir -p ~/wiki/user/downloads
+
+# Check if symlinks already exist
+if [[ -L ~/wiki/user/documents/Documents ]]; then
+    echo "⚠️  Documents symlink already exists"
+else
+    echo "📁 Creating Documents symlink..."
+    ln -s ~/Documents ~/wiki/user/documents/Documents
+    echo "✅ Documents → ~/wiki/user/documents/Documents"
+fi
+
+if [[ -L ~/wiki/user/downloads/Downloads ]]; then
+    echo "⚠️  Downloads symlink already exists"
+else
+    echo "📁 Creating Downloads symlink..."
+    ln -s ~/Downloads ~/wiki/user/downloads/Downloads
+    echo "✅ Downloads → ~/wiki/user/downloads/Downloads"
+fi
+
+# Create a README explaining the integration
+cat > ~/wiki/user/documents/README.md << 'EOF'
+# 📂 Folder Integration
+
+This directory contains symlinks to your home folder's Documents and Downloads directories.
+
+## Structure
+
+- `Documents/` → `~/Documents/` (symlink)
+- `Downloads/` → `~/Downloads/` (symlink)
+
+## How to Use
+
+1. **Access your documents through the wiki**:
+   ```bash
+   ls ~/wiki/user/documents/Documents/
+   ```
+
+2. **Search across all your files**:
+   ```bash
+   rg "search term" ~/wiki/
+   ```
+
+3. **Move important files to wiki permanently**:
+   ```bash
+   mv ~/wiki/user/documents/Documents/important.pdf ~/wiki/user/attachments/
+   ```
+
+## Benefits
+
+- Access all your files through one interface (the wiki)
+- Search across documents, downloads, and wiki notes simultaneously
+- Maintain original file locations (no duplication)
+- Git version control for important files you move to wiki
+EOF
+
+cat > ~/wiki/user/downloads/README.md << 'EOF'
+# 📥 Downloads Integration
+
+This directory contains a symlink to your home folder's Downloads directory.
+
+## Structure
+
+- `Downloads/` → `~/Downloads/` (symlink)
+
+## How to Use
+
+1. **Access downloads through wiki**:
+   ```bash
+   ls ~/wiki/user/downloads/Downloads/
+   ```
+
+2. **Process downloaded files**:
+   ```bash
+   # Move important downloads to wiki attachments
+   mv ~/wiki/user/downloads/Downloads/research.pdf ~/wiki/user/attachments/
+
+   # Create a wiki note about the file
+   wiki new "Research paper analysis"
+   ```
+
+3. **Clean up old downloads**:
+   ```bash
+   # Use wiki search to find old downloads
+   find ~/wiki/user/downloads/ -type f -mtime +30
+   ```
+EOF
+
+echo "🎉 Folder integration complete!"
+echo ""
+echo "You can now access:"
+echo "  • Documents: ~/wiki/user/documents/Documents/"
+echo "  • Downloads: ~/wiki/user/downloads/Downloads/"
+echo ""
+echo "Try it out:"
+echo "  ls ~/wiki/user/documents/Documents/"
+echo "  ls ~/wiki/user/downloads/Downloads/"

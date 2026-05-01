@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Ollama
+Comment=Local LLM Server
+Exec=xfce4-terminal --title="Ollama Control" --command="bash -c 'echo \"Ollama Service Control\"; echo \"=======================\"; echo \"\"; echo \"Current Status:\"; systemctl status ollama --no-pager | head -3; echo \"\"; echo \"Commands:\"; echo \"  Start:   systemctl start ollama\"; echo \"  Stop:    systemctl stop ollama\"; echo \"  Restart: systemctl restart ollama\"; echo \"  Models:  ollama list\"; echo \"\"; echo \"Press Enter to close\"; read; exit'"
+Icon=terminal
+Terminal=true
+Type=Application
+Categories=System;Utility;
+StartupWMClass=Ollama

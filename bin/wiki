@@ -1,234 +1,273 @@
 #!/usr/bin/env bash
 # bin/wiki — Wiki-Linux unified command-line interface.
-#
-# This script is the single entry point for interacting with the wiki from
-# the terminal. It dispatches to Python modules, system tools (Obsidian, mdt,
-# glow, git), and systemd depending on the subcommand. Add new subcommands
-# as case branches; no Python changes required for purely shell operations.
-#
 # Install: ln -s "$HOME/wiki-linux/bin/wiki" "$HOME/.local/bin/wiki"
 
 set -euo pipefail
 
-# --- Locate the project root ---
-# The script follows symlinks so it works from ~/.local/bin/wiki.
+# ── Locate project root (follows symlinks) ────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-PYTHON="${WIKI_OS_PYTHON:-python3}"
+PYTHON="${WIKI_OS_PYTHON:-$PROJECT_ROOT/.venv/bin/python3}"
+[[ -x "$PYTHON" ]] || PYTHON="python3"
 CONFIG="${WIKI_OS_CONFIG:-$HOME/.config/wiki-linux/config.json}"
 
-# Read WIKI_ROOT from config using python one-liner to avoid bash JSON parsing.
 WIKI_ROOT="$($PYTHON -c "
 import json, pathlib, os
 p = os.environ.get('WIKI_OS_CONFIG', '$CONFIG')
-with open(p) as f: c = json.load(f)
-print(pathlib.Path(c['wiki']['root']).expanduser().resolve())
+try:
+    with open(p) as f: c = json.load(f)
+    print(pathlib.Path(c['wiki']['root']).expanduser().resolve())
+except Exception:
+    print(pathlib.Path.home() / 'wiki')
 " 2>/dev/null || echo "$HOME/wiki")"
 
-# Add project src to PYTHONPATH so `python3 -m src.X` works from anywhere.
 export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
 export WIKI_OS_CONFIG="$CONFIG"
 
-# --- Helpers ---
-_usage() {
-  cat <<EOF
-Wiki-Linux — wiki-native knowledge layer for Arch Linux
+# ── Colour & style ────────────────────────────────────────────────────────────
+if [[ -t 1 ]] && [[ "${TERM:-}" != "dumb" ]]; then
+  BOLD=$'\e[1m';   DIM=$'\e[2m';    RESET=$'\e[0m'
+  CYAN=$'\e[96m';  GREEN=$'\e[92m'; YELLOW=$'\e[93m'
+  RED=$'\e[91m';   BLUE=$'\e[94m';  MAGENTA=$'\e[95m'
+  WHITE=$'\e[97m'; GREY=$'\e[90m'
+else
+  BOLD=''; DIM=''; RESET=''; CYAN=''; GREEN=''; YELLOW=''
+  RED=''; BLUE=''; MAGENTA=''; WHITE=''; GREY=''
+fi
 
-Usage: wiki <subcommand> [args]
+_box_top() { printf '%s╭%s╮%s\n' "$CYAN" "$(printf '─%.0s' $(seq 1 "${1:-60}"))" "$RESET"; }
+_box_bot() { printf '%s╰%s╯%s\n' "$CYAN" "$(printf '─%.0s' $(seq 1 "${1:-60}"))" "$RESET"; }
+_box_row() { printf '%s│%s %-*b %s│%s\n' "$CYAN" "$RESET" "${2:-58}" "${1}" "$CYAN" "$RESET"; }
+_box_sep() { printf '%s├%s┤%s\n' "$CYAN" "$(printf '─%.0s' $(seq 1 "${1:-60}"))" "$RESET"; }
 
-Subcommands:
-  new <title>          Create a new page from template (opens in \$EDITOR)
-  open [page]          Open the wiki in Obsidian (GUI) or mdt (terminal)
-  search <query>       Full-text ripgrep search across the wiki
-  ask "<question>"     Natural-language Q&A powered by the local LLM
-  status               Show recent changes and git status
-  sync                 Commit and push all changes to the configured remote
-  reprocess <file>     Force the LLM to regenerate the wiki page for a file
-  serve                Start the monitor daemon in the foreground (for debugging)
-  config               Print the resolved configuration
-  help                 Show this message
-  lint                 Check for broken links in the wiki
-
-Examples:
-  wiki new "Pacman cheatsheet"
-  wiki search "GPU driver"
-  wiki ask "What does my fstab mount at boot?"
-  wiki sync
-EOF
-}
-
-# --- Main dispatch ---
-case "${1:-help}" in
-  new) shift; cmd_new "$@";;
-  open) shift; cmd_open "$@";;
-  search) shift; cmd_search "$@";;
-  ask) shift; cmd_ask "$@";;
-  status) cmd_status;;
-  sync) cmd_sync;;
-  reprocess) shift; cmd_reprocess "$@";;
-  serve) cmd_serve;;
-  config) cmd_config;;
-  lint) cmd_lint;;
-  help|--help|-h) _usage;;
-  *) _usage; exit 1;;
-esac
+_ok()   { printf '  %s✓%s  %s\n'  "$GREEN"  "$RESET" "$*"; }
+_warn() { printf '  %s!%s  %s\n'  "$YELLOW" "$RESET" "$*"; }
+_err()  { printf '  %s✗%s  %s\n'  "$RED"    "$RESET" "$*" >&2; }
+_info() { printf '  %s→%s  %s\n'  "$CYAN"   "$RESET" "$*"; }
 
 _require() {
-  command -v "$1" &>/dev/null || {
-    echo "Error: '$1' is not installed. Run install.sh to set up dependencies." >&2
-    exit 1
-  }
+  command -v "$1" &>/dev/null || { _err "'$1' not installed. Run install.sh."; exit 1; }
 }
 
-# --- Subcommand: new ---
+# ── Usage ─────────────────────────────────────────────────────────────────────
+_usage() {
+  printf '\n'
+  _box_top 62
+  _box_row "${BOLD}${WHITE}  wiki-linux${RESET}  ${GREY}— local LLM knowledge layer for Arch Linux${RESET}" 62
+  _box_sep 62
+  _box_row "  ${CYAN}Subcommands${RESET}" 62
+  _box_row "" 62
+  _box_row "  ${GREEN}new${RESET} ${WHITE}<title>${RESET}        Create a new wiki page (opens in \$EDITOR)" 62
+  _box_row "  ${GREEN}ingest${RESET} ${WHITE}<file>${RESET}      Ingest a source file via LLM" 62
+  _box_row "  ${GREEN}open${RESET} ${WHITE}[page]${RESET}        Open wiki in Obsidian or mdt" 62
+  _box_row "  ${GREEN}search${RESET} ${WHITE}<query>${RESET}     Full-text ripgrep search" 62
+  _box_row "  ${GREEN}ask${RESET} ${WHITE}\"<question>\"${RESET}  LLM Q&A from your wiki" 62
+  _box_row "  ${GREEN}status${RESET}             Daemon + git + wiki overview" 62
+  _box_row "  ${GREEN}sync${RESET}               Commit & push to git remote" 62
+  _box_row "  ${GREEN}lint${RESET}               Check for broken wikilinks" 62
+  _box_row "  ${GREEN}task${RESET} ${WHITE}\"<title>\"${RESET}    Log a task note to _meta/tasks/" 62
+  _box_row "  ${GREEN}reprocess${RESET} ${WHITE}<file>${RESET}   Force-regenerate a wiki page" 62
+  _box_row "  ${GREEN}serve${RESET}              Run monitor in foreground (debug)" 62
+  _box_row "  ${GREEN}config${RESET}             Show resolved configuration" 62
+  _box_row "  ${GREEN}help${RESET}               This message" 62
+  _box_row "" 62
+  _box_sep 62
+  _box_row "  ${GREY}Examples${RESET}" 62
+  _box_row "  ${DIM}wiki new \"Pacman cheatsheet\"${RESET}" 62
+  _box_row "  ${DIM}wiki ingest ~/Downloads/arch-guide.txt${RESET}" 62
+  _box_row "  ${DIM}wiki search \"GPU driver\"${RESET}" 62
+  _box_row "  ${DIM}wiki ask \"What does my fstab mount at boot?\"${RESET}" 62
+  _box_row "  ${DIM}wiki sync${RESET}" 62
+  _box_row "" 62
+  _box_bot 62
+  printf '\n'
+}
+
+# ── new ───────────────────────────────────────────────────────────────────────
 cmd_new() {
   local title="${*:-Untitled}"
-  local slug
+  local slug date target
   slug="$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')"
-  local date
   date="$(date +%Y-%m-%d)"
-  local target="$WIKI_ROOT/user/notes/${date}-${slug}.md"
-
+  target="$WIKI_ROOT/user/notes/${date}-${slug}.md"
   mkdir -p "$(dirname "$target")"
-
   if [[ ! -f "$target" ]]; then
     cat > "$target" <<TEMPLATE
 ---
 title: $title
 created: $(date -u +%Y-%m-%dT%H:%M:%SZ)
 tags: []
+sources: []
 ---
 
 # $title
 
 TEMPLATE
+    _ok "Created: $target"
+  else
+    _info "Already exists: $target"
   fi
-
-  local editor="${EDITOR:-nvim}"
-  "$editor" "$target"
+  "${EDITOR:-nvim}" "$target"
 }
 
-# --- Subcommand: open ---
+# ── ingest ────────────────────────────────────────────────────────────────────
+cmd_ingest() {
+  [[ $# -eq 0 ]] && { _err "Usage: wiki ingest <path-to-file>"; exit 1; }
+  local file="$1"
+  [[ -f "$file" ]] || { _err "File not found: $file"; exit 1; }
+  _info "Ingesting: $file"
+  $PYTHON -m src.ingest "$file"
+  _ok "Ingest complete"
+}
+
+# ── open ──────────────────────────────────────────────────────────────────────
 cmd_open() {
   local page="${1:-}"
-
-  # Prefer Obsidian if running in a graphical session.
   if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v obsidian &>/dev/null; then
     if [[ -n "$page" ]]; then
-      obsidian "obsidian://open?vault=wiki&file=${page}"
+      obsidian "obsidian://open?vault=wiki&file=${page}" &
     else
       obsidian "$WIKI_ROOT" &
     fi
+    _ok "Opened in Obsidian"
     return
   fi
-
-  # Fall back to mdt (terminal markdown navigator).
   _require mdt
-  if [[ -n "$page" ]]; then
-    mdt "$WIKI_ROOT/$page"
-  else
-    mdt "$WIKI_ROOT"
-  fi
+  mdt "${page:+$WIKI_ROOT/$page}" "${page:-$WIKI_ROOT}"
 }
 
-# --- Subcommand: search ---
+# ── search ────────────────────────────────────────────────────────────────────
 cmd_search() {
-  [[ $# -eq 0 ]] && { echo "Usage: wiki search <query>"; exit 1; }
+  [[ $# -eq 0 ]] && { _err "Usage: wiki search <query>"; exit 1; }
   _require rg
-
   local query="$*"
-  # Use glow to render results if available, otherwise just print.
+  printf '\n%s  Searching wiki for:  %s"%s"%s\n\n' "$GREY" "$CYAN" "$query" "$RESET"
   if command -v glow &>/dev/null; then
     rg --color=always --heading --line-number --type md \
-      --ignore-case "$query" "$WIKI_ROOT" | glow -
+       --ignore-case "$query" "$WIKI_ROOT" | glow -
   else
     rg --color=always --heading --line-number --type md \
-      --ignore-case "$query" "$WIKI_ROOT"
+       --ignore-case "$query" "$WIKI_ROOT"
   fi
 }
 
-# --- Subcommand: ask ---
+# ── ask ───────────────────────────────────────────────────────────────────────
 cmd_ask() {
-  [[ $# -eq 0 ]] && { echo "Usage: wiki ask \"<question>\""; exit 1; }
+  [[ $# -eq 0 ]] && { _err "Usage: wiki ask \"<question>\""; exit 1; }
   local question="$*"
-  echo "Searching wiki and asking the LLM..."
+  printf '\n%s  Asking the wiki:%s\n  %s"%s"%s\n\n' "$GREY" "$RESET" "$CYAN" "$question" "$RESET"
   $PYTHON -m src.search "$question"
 }
 
-# --- Subcommand: status ---
+# ── status ────────────────────────────────────────────────────────────────────
 cmd_status() {
-  # Get daemon PID
-  local pid
+  local pid count size last_sync remote branch daemon_state timer_state
   pid="$(systemctl --user show wiki-monitor.service --property=MainPID --value 2>/dev/null || echo 0)"
-
-  # Wiki page count + size
-  local count size
-  count="$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l)"
+  count="$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
   size="$(du -sh "$WIKI_ROOT" 2>/dev/null | cut -f1 || echo '?')"
-
-  # Last sync time
-  local last_sync
   last_sync="$(git -C "$WIKI_ROOT" log -1 --format='%ci' 2>/dev/null || echo 'never')"
-
-  # Git remote
-  local remote
   remote="$(git -C "$WIKI_ROOT" remote get-url origin 2>/dev/null || echo 'none')"
+  branch="$(git -C "$WIKI_ROOT" branch --show-current 2>/dev/null || echo 'main')"
 
-  echo "Daemon status: $([ "$pid" -gt 0 ] 2>/dev/null && echo "running (PID $pid)" || echo "stopped")"
-  echo "Wiki size: $count pages, $size"
-  echo "Last sync: $last_sync"
-  echo "Git remote: origin ($remote)"
+  [[ "${pid:-0}" -gt 0 ]] 2>/dev/null \
+    && daemon_state="${GREEN}● running (PID $pid)${RESET}" \
+    || daemon_state="${RED}○ stopped${RESET}"
+
+  timer_state="$(systemctl --user is-active wiki-sync.timer 2>/dev/null || echo inactive)"
+  [[ "$timer_state" == "active" ]] \
+    && timer_state="${GREEN}● $timer_state${RESET}" \
+    || timer_state="${YELLOW}○ $timer_state${RESET}"
+
+  printf '\n'
+  _box_top 60
+  _box_row "  ${BOLD}${WHITE}wiki-linux status${RESET}" 60
+  _box_sep 60
+  printf '%s│%s  %-16s ' "$CYAN" "$RESET" "Daemon"
+  printf '%-50b%s│%s\n' "$daemon_state" "$CYAN" "$RESET"
+  printf '%s│%s  %-16s ' "$CYAN" "$RESET" "Sync timer"
+  printf '%-50b%s│%s\n' "$timer_state" "$CYAN" "$RESET"
+  _box_sep 60
+  _box_row "  ${GREY}Wiki${RESET}" 60
+  _box_row "  Pages       ${WHITE}$count${RESET}" 60
+  _box_row "  Size        ${WHITE}$size${RESET}" 60
+  _box_row "  Root        ${DIM}$WIKI_ROOT${RESET}" 60
+  _box_sep 60
+  _box_row "  ${GREY}Git${RESET}" 60
+  _box_row "  Branch      ${WHITE}$branch${RESET}" 60
+  _box_row "  Last sync   ${DIM}$last_sync${RESET}" 60
+  _box_row "  Remote      ${DIM}$remote${RESET}" 60
+  _box_bot 60
+  printf '\n'
 }
 
-# --- Subcommand: sync ---
+# ── sync ──────────────────────────────────────────────────────────────────────
 cmd_sync() {
-  echo "Committing and pushing changes..."
+  _info "Committing and pushing changes..."
   $PYTHON -m src.sync
+  _ok "Sync complete"
 }
 
-# --- Subcommand: reprocess ---
-cmd_reprocess() {
-  [[ $# -eq 0 ]] && { echo "Usage: wiki reprocess <absolute-path-to-file>"; exit 1; }
-  local file="$1"
-  if [[ ! -f "$file" ]]; then
-    echo "File not found: $file" >&2
-    exit 1
-  fi
-  echo "Archiving and reprocessing: $file"
-  $PYTHON -m src.ingest --reprocess "$file"
-}
-
-# --- Subcommand: serve (foreground daemon for debugging) ---
-cmd_serve() {
-  echo "Starting monitor in foreground (Ctrl-C to stop)..."
-  $PYTHON -m src.monitor "${@}"
-}
-
-# --- Subcommand: config ---
-cmd_config() {
-  echo "Opening config file in read-only mode: $CONFIG"
-  less "$CONFIG"
-}
-
-# --- Subcommand: lint ---
+# ── lint ──────────────────────────────────────────────────────────────────────
 cmd_lint() {
-  echo "Checking for broken links..."
+  _info "Checking wiki for broken links..."
   $PYTHON -m src.lint
 }
 
-# --- Main dispatch ---
+# ── task ──────────────────────────────────────────────────────────────────────
+cmd_task() {
+  [[ $# -eq 0 ]] && { _err "Usage: wiki task \"<title>\" [\"<body>\"]"; exit 1; }
+  local title="$1" body="${2:-}"
+  _info "Logging task: $title"
+  $PYTHON - <<PYEOF
+from src.config import cfg
+from src import tasklog
+tasklog.write_task_note("$title", """$body""")
+print("  Task logged to ~/wiki/_meta/tasks/")
+PYEOF
+  _ok "Task note created"
+}
+
+# ── reprocess ─────────────────────────────────────────────────────────────────
+cmd_reprocess() {
+  [[ $# -eq 0 ]] && { _err "Usage: wiki reprocess <absolute-path-to-file>"; exit 1; }
+  local file="$1"
+  [[ -f "$file" ]] || { _err "File not found: $file"; exit 1; }
+  _info "Archiving and reprocessing: $file"
+  $PYTHON -m src.ingest --reprocess "$file"
+  _ok "Reprocess complete"
+}
+
+# ── serve ─────────────────────────────────────────────────────────────────────
+cmd_serve() {
+  _info "Starting monitor in foreground (Ctrl-C to stop)..."
+  $PYTHON -m src.monitor "${@}"
+}
+
+# ── config ────────────────────────────────────────────────────────────────────
+cmd_config() {
+  printf '\n%s  Config:%s %s%s%s\n\n' "$GREY" "$RESET" "$CYAN" "$CONFIG" "$RESET"
+  if command -v glow &>/dev/null; then
+    $PYTHON -c "import json; d=json.load(open('$CONFIG')); print(json.dumps(d, indent=2))" | glow -
+  else
+    less "$CONFIG"
+  fi
+}
+
+# ── Main dispatch ─────────────────────────────────────────────────────────────
 case "${1:-help}" in
-  new) shift; cmd_new "$@";;
-  open) shift; cmd_open "$@";;
-  search) shift; cmd_search "$@";;
-  ask) shift; cmd_ask "$@";;
-  status) cmd_status;;
-  sync) cmd_sync;;
+  new)       shift; cmd_new       "$@";;
+  ingest)    shift; cmd_ingest    "$@";;
+  open)      shift; cmd_open      "$@";;
+  search)    shift; cmd_search    "$@";;
+  ask)       shift; cmd_ask       "$@";;
+  status)          cmd_status        ;;
+  sync)            cmd_sync          ;;
+  lint)            cmd_lint          ;;
+  task)      shift; cmd_task      "$@";;
   reprocess) shift; cmd_reprocess "$@";;
-  serve) cmd_serve;;
-  config) cmd_config;;
-  lint) cmd_lint;;
-  help|--help|-h) _usage;;
-  *) _usage; exit 1;;
+  serve)     shift; cmd_serve     "$@";;
+  config)          cmd_config        ;;
+  help|--help|-h)  _usage            ;;
+  *) _err "Unknown subcommand: $1"; _usage; exit 1;;
 esac

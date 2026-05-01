@@ -215,12 +215,20 @@ step "Installing wiki CLI"
 LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$LOCAL_BIN"
 chmod +x "$PROJECT_ROOT/bin/wiki"
+chmod +x "$PROJECT_ROOT/bin/wiki-notify"
 
 if [[ -L "$LOCAL_BIN/wiki" ]]; then
   ok "wiki symlink already exists"
 else
   ln -s "$PROJECT_ROOT/bin/wiki" "$LOCAL_BIN/wiki"
   ok "Symlinked bin/wiki → $LOCAL_BIN/wiki"
+fi
+
+if [[ -L "$LOCAL_BIN/wiki-notify" ]]; then
+  ok "wiki-notify symlink already exists"
+else
+  ln -s "$PROJECT_ROOT/bin/wiki-notify" "$LOCAL_BIN/wiki-notify"
+  ok "Symlinked bin/wiki-notify → $LOCAL_BIN/wiki-notify"
 fi
 
 # Warn if ~/.local/bin is not in PATH.

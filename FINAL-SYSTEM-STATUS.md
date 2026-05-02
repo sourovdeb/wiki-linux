@@ -3,6 +3,7 @@
 **Status:** ✅ PRODUCTION READY  
 **Reproducible:** ✅ YES (install-reproducible.sh)  
 **Transferable:** ✅ YES (portable config.json)  
+**Complete Blueprint:** 📖 See [OBSIDIAN-SYSTEM-BLUEPRINT.md](OBSIDIAN-SYSTEM-BLUEPRINT.md) for full system documentation
 
 ## System Overview
 
@@ -15,9 +16,11 @@ Complete Arch Linux development environment where **every tool is wiki-native**.
 | Disk Available | 99GB (52% used) |
 | Disk Recovered | 40GB+ from baseline |
 | Wiki Documents | 77 pages |
-| Git Commits | 38 commits |
+| Git Commits | 38+ commits |
 | Repositories | 2 (project + wiki) |
 | Time to Deploy | ~15 minutes |
+| Wallpaper Updates | Every 30 seconds |
+| Screensaver | Live wiki dashboard |
 
 ## Tools Bound to Wiki
 
@@ -29,6 +32,8 @@ Complete Arch Linux development environment where **every tool is wiki-native**.
 | Cline | ~/.cline/.env | ✅ Bound |
 | Codex | PYTHONPATH + WIKI_ROOT | ✅ Ready |
 | Claude Code | ~/.cline/.env | ✅ Ready |
+| Open WebUI | http://127.0.0.1:8080 | ✅ Running |
+| **Wallpaper/Screensaver** | **~/.*local/bin/wiki-wallpaper-*** | **✅ Active** |
 
 ## Infrastructure
 
@@ -48,6 +53,12 @@ Complete Arch Linux development environment where **every tool is wiki-native**.
 ~/.cline/
   ├── .env                   AI tool environment
   └── cline-rules.md         Cline behavior rules
+
+~/.local/bin/
+  ├── wiki-wallpaper-gen     Wallpaper generator (Python)
+  ├── wiki-wallpaper-set     Wallpaper applier
+  ├── wiki-screensaver-daemon  Dashboard screensaver
+  └── wiki-*                 CLI tools
 
 /etc/
   ├── profile.d/wiki-linux.sh    Global environment
@@ -147,7 +158,12 @@ systemctl status ollama
 ollama list              # Show models
 obsidian ~/wiki          # Open vault
 code ~/Documents/wiki-linux
-~/.local/bin/wiki-screensaver  # Dashboard
+~/.local/bin/wiki-screensaver-daemon  # Live dashboard screensaver
+
+# Wallpaper/Desktop
+~/.local/bin/wiki-wallpaper-gen      # Generate wallpaper (auto-called)
+~/.local/bin/wiki-wallpaper-set      # Set wallpaper now
+systemctl --user status wiki-wallpaper.timer  # Check auto-update
 
 # Export/transfer
 tar -czf wiki-linux.tar.gz /opt/wiki-linux ~/wiki ~/Documents/wiki-linux

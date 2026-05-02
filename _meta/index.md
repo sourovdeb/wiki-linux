@@ -1,11 +1,11 @@
 ---
 title: Wiki Index
-updated: 2026-05-01 20:21 UTC
+updated: 2026-05-02 02:58 UTC
 ---
 
 # Wiki Index
 
-*49 pages — last rebuilt 2026-05-01 20:21 UTC*
+*57 pages — last rebuilt 2026-05-02 02:58 UTC*
 
 ## Bmo
 
@@ -37,11 +37,23 @@ updated: 2026-05-01 20:21 UTC
 - [[copilot/copilot-custom-prompts/Summarize|Summarize]]
 - [[copilot/copilot-custom-prompts/Translate to Chinese|Translate To Chinese]]
 
+## Raw
+
+- [[raw/README|Raw Sources (Layer 1)]]  `meta` `raw` `layer-1`
+
+## References
+
+- [[references/archwiki|Archwiki]]
+
 ## Root
 
+- [[AGENTS|Agents]]
+- [[CLAUDE|Claude]]
+- [[EXPECTATIONS|Expectations]]
 - [[GUIDE|Guide]]
 - [[HOW-TO-USE-DAILY|How to Use Wiki-Linux Daily]]  `guide` `daily` `quick-reference`
 - [[START-HERE|Start Here]]  `start` `guide`
+- [[WIKI_AGENT|Wiki Agent]]
 - [[README|Wiki Index]]  `home` `index`
 
 ## Sources
@@ -51,6 +63,7 @@ updated: 2026-05-01 20:21 UTC
 
 ## System
 
+- [[system/brightness-control|Brightness Control]]
 - [[system/config/pacman.conf|Pacman.Conf]]
 - [[system/overview|System Overview]]  `system` `overview`
 - [[system/README|System Space]]  `system` `root`
@@ -65,6 +78,7 @@ updated: 2026-05-01 20:21 UTC
 
 ## User
 
+- [[user/notes/brightness-troubleshooting|Brightness Troubleshooting]]
 - [[user/copilot/copilot-custom-prompts/Generate table of contents|Generate Table Of Contents]]
 - [[user/notes/my-day|My Day]]
 - [[user/notes/README|Notes]]  `space`

@@ -70,6 +70,9 @@ _usage() {
   _box_row "  ${GREEN}reprocess${RESET} ${WHITE}<file>${RESET}   Force-regenerate a wiki page" 62
   _box_row "  ${GREEN}serve${RESET}              Run monitor in foreground (debug)" 62
   _box_row "  ${GREEN}config${RESET}             Show resolved configuration" 62
+  _box_row "  ${GREEN}doctor${RESET}             Verify EXPECTATIONS safety guarantees" 62
+  _box_row "  ${GREEN}rescue${RESET}             Import stray docs from non-watched dirs" 62
+  _box_row "  ${GREEN}openwebui${RESET}          Launch Open WebUI (chat UI on localhost)" 62
   _box_row "  ${GREEN}help${RESET}               This message" 62
   _box_row "" 62
   _box_sep 62
@@ -254,6 +257,24 @@ cmd_config() {
   fi
 }
 
+# ── doctor ────────────────────────────────────────────────────────────────────
+cmd_doctor() {
+  _info "Running safety audit..."
+  "$SCRIPT_DIR/wiki-doctor"
+}
+
+# ── rescue ────────────────────────────────────────────────────────────────────
+cmd_rescue() {
+  _info "Running rescue scan..."
+  "$SCRIPT_DIR/wiki-rescue" "$@"
+}
+
+# ── openwebui ──────────────────────────────────────────────────────────────────
+cmd_openwebui() {
+  _info "Managing Open WebUI..."
+  "$SCRIPT_DIR/wiki-openwebui" "$@"
+}
+
 # ── Main dispatch ─────────────────────────────────────────────────────────────
 case "${1:-help}" in
   new)       shift; cmd_new       "$@";;
@@ -268,6 +289,9 @@ case "${1:-help}" in
   reprocess) shift; cmd_reprocess "$@";;
   serve)     shift; cmd_serve     "$@";;
   config)          cmd_config        ;;
+  doctor)          cmd_doctor        ;;
+  rescue)    shift; cmd_rescue    "$@";;
+  openwebui)  shift; cmd_openwebui  "$@";;
   help|--help|-h)  _usage            ;;
   *) _err "Unknown subcommand: $1"; _usage; exit 1;;
 esac

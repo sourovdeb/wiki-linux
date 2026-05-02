@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# wiki-rescue — import stray documents from non-watched directories
+# Usage: wiki-rescue [--list|--import|--status]
+set -euo pipefail
+
+# Paths
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wiki-linux"
+RAW_DIR="$WIKI_ROOT/raw"
+TMP_DIR="/tmp"
+
+# Load config if available
+if [ -f "$CONFIG_DIR/config.json" ]; then
+  WIKI_ROOT=$(jq -r '.wiki.root // "'"$HOME/wiki"'"' "$CONFIG_DIR/config.json" 2>/dev/null || echo "$HOME/wiki")
+  RAW_DIR="$WIKI_ROOT/raw"
+fi
+
+# Functions
+list_stray_files() {
+  local dirs=("$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Desktop" "$TMP_DIR")
+  local extensions=("md" "txt" "pdf" "org" "markdown" "rst")
+  local found=0
+
+  for dir in "${dirs[@]}"; do
+    if [ -d "$dir" ]; then
+      for ext in "${extensions[@]}"; do
+        while IFS= read -r -d '' file; do
+          # Skip pytest temp files
+          if [[ "$file" == *"/pytest-of-"* ]]; then
+            continue
+          fi
+          # Skip files already in wiki
+          if [[ "$file" == "$WIKI_ROOT/"* ]]; then
+            continue
+          fi
+          echo "$file"
+          found=$((found + 1))
+        done < <(find "$dir" -maxdepth 2 -type f -name "*.$ext" -print0 2>/dev/null)
+      done
+    fi
+  done
+
+  if [ "$found" -eq 0 ]; then
+    echo "No stray files found."
+  fi
+}
+
+import_stray_files() {
+  local files=()
+  while IFS= read -r file; do
+    if [ -n "$file" ] && [ "$file" != "No stray files found." ]; then
+      files+=("$file")
+    fi
+  done < <(list_stray_files)
+
+  if [ "${#files[@]}" -eq 0 ]; then
+    echo "No files to import."
+    return 0
+  fi
+
+  echo "Found ${#files[@]} stray file(s). Importing to $RAW_DIR/..."
+  mkdir -p "$RAW_DIR"
+
+  for file in "${files[@]}"; do
+    local dest="$RAW_DIR/$(basename "$file")"
+    # Handle duplicates
+    local counter=1
+    while [ -e "$dest" ]; do
+      dest="$RAW_DIR/$(basename "$file").$counter"
+      counter=$((counter + 1))
+    done
+
+    echo "  $file → $dest"
+    cp -p "$file" "$dest"
+  done
+
+  echo "✓ Imported ${#files[@]} files to $RAW_DIR/"
+  echo "Run 'wiki ingest $RAW_DIR/*' to process them into your wiki."
+}
+
+show_status() {
+  echo "  wiki-rescue status"
+  if [ -d "$RAW_DIR" ]; then
+    local count=$(find "$RAW_DIR" -maxdepth 1 -type f 2>/dev/null | wc -l)
+    echo "  ✓ raw/ directory exists with $count files"
+  else
+    echo "  ! raw/ directory missing (run: install.sh)"
+  fi
+
+  local stray_count=$(list_stray_files 2>/dev/null | grep -v "No stray files found." | wc -l)
+  if [ "$stray_count" -gt 0 ]; then
+    echo "  ! $stray_count stray files found (run: wiki-rescue --list)"
+  else
+    echo "  ✓ no stray files detected"
+  fi
+}
+
+# CLI
+case "${1:-}" in
+  --list)
+    list_stray_files
+    ;;
+  --import)
+    import_stray_files
+    ;;
+  --status)
+    show_status
+    ;;
+  *)
+    echo "Usage: wiki-rescue [--list|--import|--status]"
+    echo ""
+    echo "  --list    List stray documents in Pictures/Videos/Music/Desktop/tmp"
+    echo "  --import  Import all stray files to ~/wiki/raw/"
+    echo "  --status  Show current status"
+    exit 1
+    ;;
+esac

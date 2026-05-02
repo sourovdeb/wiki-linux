@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+# wiki-doctor — verify EXPECTATIONS.md safety guarantees
+# Usage: wiki-doctor [--resnapshot]
+set -euo pipefail
+
+# Paths
+CONFIG_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/wiki-linux/config.json"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wiki-linux"
+SNAPSHOT_FILE="$CACHE_DIR/etc-snapshot.sha256"
+ARCHIVE_DIR="$WIKI_ROOT/_archive"
+SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+
+# Functions
+check_config_readonly() {
+  if [ -f "$CONFIG_FILE" ]; then
+    local mode=$(stat -c '%a' "$CONFIG_FILE" 2>/dev/null || stat -f '%OLp' "$CONFIG_FILE" 2>/dev/null)
+    if [ "$mode" = "444" ] || [ "$mode" = "555" ]; then
+      echo "  ✓  config-readonly  $CONFIG_FILE mode=$mode"
+      return 0
+    else
+      echo "  !  config-writable  $CONFIG_FILE mode=$mode (expected 444)"
+      return 1
+    fi
+  else
+    echo "  !  config-missing  $CONFIG_FILE not found"
+    return 1
+  fi
+}
+
+check_etc_unchanged() {
+  if [ ! -f "$SNAPSHOT_FILE" ]; then
+    echo "  !  etc-unchanged  no snapshot at $SNAPSHOT_FILE (run: wiki doctor --resnapshot)"
+    return 1
+  fi
+
+  local changed=0
+  while IFS= read -r line; do
+    local file=$(echo "$line" | cut -d' ' -f3-)
+    if [ -f "$file" ]; then
+      local current_hash=$(sha256sum "$file" | awk '{print $1}')
+      local stored_hash=$(echo "$line" | awk '{print $1}')
+      if [ "$current_hash" != "$stored_hash" ]; then
+        echo "  !  etc-changed  $file hash mismatch"
+        changed=1
+      fi
+    fi
+  done < "$SNAPSHOT_FILE"
+
+  if [ "$changed" -eq 0 ]; then
+    local count=$(wc -l < "$SNAPSHOT_FILE")
+    echo "  ✓  etc-unchanged  $count files match snapshot"
+    return 0
+  else
+    return 1
+  fi
+}
+
+create_etc_snapshot() {
+  mkdir -p "$CACHE_DIR"
+  local files=(
+    "/etc/passwd"
+    "/etc/group"
+    "/etc/hosts"
+    "/etc/fstab"
+    "/etc/systemd/system.conf"
+    "/etc/systemd/user.conf"
+    "/etc/pacman.conf"
+    "/etc/makepkg.conf"
+    "/etc/locale.conf"
+  )
+
+  echo -n > "$SNAPSHOT_FILE"
+  for file in "${files[@]}"; do
+    if [ -f "$file" ]; then
+      sha256sum "$file" >> "$SNAPSHOT_FILE"
+    fi
+  done
+
+  echo "Snapshot written: $SNAPSHOT_FILE ($(wc -l < "$SNAPSHOT_FILE") files)"
+}
+
+check_archive_exists() {
+  if [ -d "$ARCHIVE_DIR" ]; then
+    local count=$(find "$ARCHIVE_DIR" -type f 2>/dev/null | wc -l)
+    echo "  ✓  archive-exists  $ARCHIVE_DIR holds $count archived files"
+    return 0
+  else
+    echo "  !  archive-missing  $ARCHIVE_DIR not found"
+    return 1
+  fi
+}
+
+check_systemd_as_user() {
+  local units=("wiki-monitor.service" "wiki-sync.service" "wiki-sync.timer")
+  local all_ok=1
+
+  for unit in "${units[@]}"; do
+    if [ -f "$SYSTEMD_USER_DIR/$unit" ]; then
+      # User=%u is best practice but not required (user services default to login user)
+      if ! grep -q "User=root" "$SYSTEMD_USER_DIR/$unit" 2>/dev/null; then
+        continue
+      else
+        echo "  !  systemd-root  $unit has User=root"
+        all_ok=0
+      fi
+    else
+      echo "  !  systemd-missing  $unit not in user dir"
+      all_ok=0
+    fi
+  done
+
+  if [ "$all_ok" -eq 1 ]; then
+    echo "  ✓  systemd-as-user  all ${#units[@]} user units present, no root override"
+    return 0
+  else
+    return 1
+  fi
+}
+
+check_git_tracked() {
+  if [ -d "$WIKI_ROOT/.git" ]; then
+    local commits=$(git -C "$WIKI_ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
+    local last_commit=$(git -C "$WIKI_ROOT" log -1 --format=%cd --date=relative 2>/dev/null || echo "never")
+    echo "  ✓  git-tracked  $commits commits, last $last_commit"
+    return 0
+  else
+    echo "  !  git-missing  $WIKI_ROOT/.git not found"
+    return 1
+  fi
+}
+
+check_wiki_root_exists() {
+  if [ -d "$WIKI_ROOT" ]; then
+    echo "  ✓  wiki-root-exists  $WIKI_ROOT"
+    return 0
+  else
+    echo "  !  wiki-missing  $WIKI_ROOT not found"
+    return 1
+  fi
+}
+
+check_daemon_running() {
+  if systemctl --user is-active wiki-monitor 2>/dev/null; then
+    local pid=$(systemctl --user show wiki-monitor -p MainPID --value 2>/dev/null || echo "unknown")
+    echo "  ✓  daemon-running  wiki-monitor PID=$pid"
+    return 0
+  else
+    echo "  !  daemon-offline  wiki-monitor not running"
+    return 1
+  fi
+}
+
+check_sync_timer() {
+  if systemctl --user is-active wiki-sync.timer 2>/dev/null; then
+    echo "  ✓  sync-timer  wiki-sync.timer active"
+    return 0
+  else
+    echo "  !  sync-inactive  wiki-sync.timer not active"
+    return 1
+  fi
+}
+
+check_ollama_reachable() {
+  if curl -s --max-time 2 "http://localhost:11434" >/dev/null 2>&1; then
+    echo "  ✓  ollama-reachable  http://localhost:11434"
+    return 0
+  else
+    echo "  !  ollama-offline  http://localhost:11434 unreachable"
+    return 1
+  fi
+}
+
+check_watch_dirs() {
+  local dirs=("$WIKI_ROOT" "$HOME/Downloads" "$HOME/Documents")
+  local all_ok=1
+
+  for dir in "${dirs[@]}"; do
+    if [ ! -d "$dir" ]; then
+      echo "  !  watch-missing  $dir not found"
+      all_ok=0
+    fi
+  done
+
+  if [ "$all_ok" -eq 1 ]; then
+    echo "  ✓  watch-dirs  wiki, Downloads, Documents all reachable"
+    return 0
+  else
+    return 1
+  fi
+}
+
+# CLI
+if [ "${1:-}" = "--resnapshot" ]; then
+  create_etc_snapshot
+  exit 0
+fi
+
+echo "  wiki-doctor  — EXPECTATIONS.md safety audit"
+echo ""
+
+passed=0
+failed=0
+
+check_config_readonly && passed=$((passed+1)) || failed=$((failed+1))
+check_etc_unchanged && passed=$((passed+1)) || failed=$((failed+1))
+check_archive_exists && passed=$((passed+1)) || failed=$((failed+1))
+check_systemd_as_user && passed=$((passed+1)) || failed=$((failed+1))
+check_git_tracked && passed=$((passed+1)) || failed=$((failed+1))
+check_wiki_root_exists && passed=$((passed+1)) || failed=$((failed+1))
+check_daemon_running && passed=$((passed+1)) || failed=$((failed+1))
+check_sync_timer && passed=$((passed+1)) || failed=$((failed+1))
+check_ollama_reachable && passed=$((passed+1)) || failed=$((failed+1))
+check_watch_dirs && passed=$((passed+1)) || failed=$((failed+1))
+
+echo ""
+echo "  Summary:  $passed passed, $failed failed, 0 warnings"
+
+if [ "$failed" -gt 0 ]; then
+  exit 1
+fi

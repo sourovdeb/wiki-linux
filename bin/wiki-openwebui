@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# wiki-openwebui — bootstrap and run Open WebUI server
+# Usage: wiki-openwebui [--install|--start|--stop|--status|--url]
+set -euo pipefail
+
+# Paths
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/wiki-linux"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wiki-linux"
+VENV_DIR="$HOME/.local/share/wiki-linux/openwebui-venv"
+PID_FILE="$CACHE_DIR/openwebui.pid"
+LOG_FILE="$CACHE_DIR/openwebui.log"
+SOCKET="127.0.0.1:8080"
+OLLAMA_URL="http://localhost:11434"
+WIKI_MOUNT="$WIKI_ROOT"
+
+# Load config if available
+if [ -f "$CONFIG_DIR/config.json" ]; then
+  OLLAMA_URL=$(jq -r '.ollama.base_url // "http://localhost:11434"' "$CONFIG_DIR/config.json" 2>/dev/null || echo "http://localhost:11434")
+  WIKI_MOUNT=$(jq -r '.wiki.root // "'"$HOME/wiki"'"' "$CONFIG_DIR/config.json" 2>/dev/null || echo "$HOME/wiki")
+fi
+
+# Functions
+is_installed() {
+  [ -d "$VENV_DIR" ] && [ -f "$VENV_DIR/bin/open-webui" ]
+}
+
+is_running() {
+  [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null
+}
+
+show_status() {
+  echo "  Open WebUI status"
+  if is_installed; then
+    echo "  ✓ installed at $VENV_DIR"
+  else
+    echo "  ! not installed (run: wiki-openwebui --install)"
+  fi
+
+  if is_running; then
+    echo "  ✓ running PID=$(cat "$PID_FILE")"
+  else
+    echo "  ! no PID file"
+  fi
+
+  if nc -z 127.0.0.1 8080 2>/dev/null; then
+    echo "  ✓ socket on 127.0.0.1:8080"
+  else
+    echo "  ! no socket on 127.0.0.1:8080"
+  fi
+
+  echo "  URL:  http://127.0.0.1:8080"
+}
+
+install_openwebui() {
+  if is_installed; then
+    echo "Open WebUI already installed at $VENV_DIR"
+    return 0
+  fi
+
+  echo "Installing Open WebUI into $VENV_DIR (~500MB)..."
+  mkdir -p "$VENV_DIR"
+  python3 -m venv "$VENV_DIR"
+  "$VENV_DIR/bin/pip" install --upgrade pip wheel setuptools
+  "$VENV_DIR/bin/pip" install open-webui
+
+  # Create symlink to wiki for knowledge bank
+  mkdir -p "$WIKI_MOUNT/knowledge"
+  ln -sfn "$WIKI_MOUNT" "$WIKI_MOUNT/knowledge/wiki-linux-vault" 2>/dev/null || true
+
+  echo "✓ Open WebUI installed"
+}
+
+start_openwebui() {
+  if is_running; then
+    echo "Open WebUI already running (PID=$(cat "$PID_FILE"))"
+    return 0
+  fi
+
+  if ! is_installed; then
+    echo "Error: Open WebUI not installed. Run: wiki-openwebui --install"
+    exit 1
+  fi
+
+  echo "Starting Open WebUI..."
+  mkdir -p "$(dirname "$LOG_FILE")"
+  nohup "$VENV_DIR/bin/open-webui" \
+    --ollama-base-url "$OLLAMA_URL" \
+    --host 127.0.0.1 \
+    --port 8080 \
+    > "$LOG_FILE" 2>&1 &
+  echo $! > "$PID_FILE"
+
+  # Wait a bit for startup
+  sleep 2
+  if is_running; then
+    echo "✓ Open WebUI started on http://127.0.0.1:8080"
+  else
+    echo "! Failed to start Open WebUI. Check $LOG_FILE"
+    exit 1
+  fi
+}
+
+stop_openwebui() {
+  if ! is_running; then
+    echo "Open WebUI not running"
+    return 0
+  fi
+
+  echo "Stopping Open WebUI..."
+  kill "$(cat "$PID_FILE")" 2>/dev/null || true
+  rm -f "$PID_FILE"
+  echo "✓ Open WebUI stopped"
+}
+
+show_url() {
+  if is_running; then
+    echo "http://127.0.0.1:8080"
+  else
+    echo "Open WebUI is not running. Start with: wiki-openwebui --start"
+    exit 1
+  fi
+}
+
+# CLI
+case "${1:-}" in
+  --install)
+    install_openwebui
+    ;;
+  --start)
+    start_openwebui
+    ;;
+  --stop)
+    stop_openwebui
+    ;;
+  --status)
+    show_status
+    ;;
+  --url)
+    show_url
+    ;;
+  *)
+    echo "Usage: wiki-openwebui [--install|--start|--stop|--status|--url]"
+    echo ""
+    echo "  --install  Install Open WebUI (~500MB) into $VENV_DIR"
+    echo "  --start    Start the server on http://127.0.0.1:8080"
+    echo "  --stop     Stop the running server"
+    echo "  --status   Show installation and runtime status"
+    echo "  --url      Print the URL (for use in scripts)"
+    exit 1
+    ;;
+esac

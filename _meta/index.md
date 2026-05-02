@@ -1,11 +1,11 @@
 ---
 title: Wiki Index
-updated: 2026-05-02 02:58 UTC
+updated: 2026-05-02 03:22 UTC
 ---
 
 # Wiki Index
 
-*57 pages — last rebuilt 2026-05-02 02:58 UTC*
+*58 pages — last rebuilt 2026-05-02 03:22 UTC*
 
 ## Bmo
 
@@ -48,6 +48,7 @@ updated: 2026-05-02 02:58 UTC
 ## Root
 
 - [[AGENTS|Agents]]
+- [[ARCH-SYSTEM-RULES|Arch System Rules]]
 - [[CLAUDE|Claude]]
 - [[EXPECTATIONS|Expectations]]
 - [[GUIDE|Guide]]

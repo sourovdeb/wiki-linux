@@ -1,11 +1,9 @@
 ---
-model: ""
+model: mistral:latest
 max_tokens: .nan
 temperature: 1
-enable_reference_current_note: false
 prompt: ""
-user_name: YOU
-enable_header: true
+user_name: USER
 chatbot_container_background_color: --background-secondary
 message_container_background_color: --background-secondary
 user_message_font_color: --text-normal

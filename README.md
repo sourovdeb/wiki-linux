@@ -55,6 +55,7 @@ wiki-linux/
 ├── CODESPACES_AGENT.md      ← GitHub Codespaces / cloud agents
 ├── CODESPACES_INTERNAL.md   ← internal Codespaces environment facts
 ├── SUPPORT_POPUP.md         ← wiki-notify popup helper
+├── free_windows_debloat_guide.md ← Windows 11 debloat & wiki-native setup guide
 ├── LICENSE                  ← MIT
 ├── config.json              ← configuration (copy to ~/.config/wiki-linux/)
 ├── install.sh               ← idempotent installer

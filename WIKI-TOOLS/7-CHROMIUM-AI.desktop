@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=🌐 Chromium AI
+Comment=Open Open WebUI in Chromium with the local AI workflow
+Exec=chromium --new-window --enable-features=SidePanelPinning,ReadAnything http://127.0.0.1:8080
+Icon=chromium
+Type=Application
+Terminal=false
+Categories=Network;WebBrowser;

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=🤖 Ollama Chat (Open WebUI)
 Comment=Chat with your local AI — mistral, llama3.2, qwen2.5-coder
-Exec=open-webui
+Exec=xdg-open http://127.0.0.1:8080
 Icon=open-webui
 Terminal=false
 Type=Application

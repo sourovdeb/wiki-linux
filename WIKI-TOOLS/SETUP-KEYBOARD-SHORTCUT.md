@@ -10,7 +10,7 @@ Do this ONCE to bind Super+Space to the wiki search box:
 5. Click OK
 
 ## Result:
-Press `Super+Space` anywhere → search box pops up → type a question → Ollama answers from your wiki.
+Press `Super+Space` anywhere → the dashboard menu pops up → search, ask Ollama, open browsers, or trim services.
 
 ---
 

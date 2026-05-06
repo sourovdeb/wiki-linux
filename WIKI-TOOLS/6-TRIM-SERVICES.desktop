@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=🧹 Trim Services
+Comment=Disable non-essential services and autoupdate-style clutter
+Exec=xfce4-terminal --title="Trim Services" --hold --command="bash /home/sourov/Documents/wiki-linux/wiki-linux/WIKI-TOOLS/handoff/04-trim-services.sh"
+Icon=system-software-update
+Type=Application
+Terminal=false
+Categories=System;

@@ -13,6 +13,14 @@ This vault is the main knowledge and navigation space for the machine.
 
 If you are new here, start with [[START-HERE|Start Here]].
 
+## Dashboard
+
+- [[user/notes/my-day|Dashboard]] — live landing page with todo list, session report, Open WebUI, and system policy.
+- [[WIKI-TOOLS/1-SEARCH-BOX.desktop|Search / Ask]]
+- [[WIKI-TOOLS/OLLAMA-CHAT.desktop|Open WebUI]]
+- [[WIKI-TOOLS/4-STATUS.desktop|Status]]
+- [[WIKI-TOOLS/5-LINT.desktop|Lint]]
+
 ## Most Common Pages
 
 - [[START-HERE|Start Here]]

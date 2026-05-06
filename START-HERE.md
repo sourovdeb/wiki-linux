@@ -13,6 +13,7 @@ This page is the easiest entry point for a new user.
 
 ## First Three Places To Click
 
+- [[user/notes/my-day|Dashboard]] to see the todo list, session report, AI box, and system policy.
 - [[system/overview|Machine overview]] to understand what this computer is tracking.
 - [[sources/README|Sources]] to add articles, notes, or documents.
 - [[_meta/recent|Recent changes]] to see what changed last.

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# wiki-library-extract — Extract all zips in my_library into organised subfolders
+# Runs once, skips already-extracted, logs to /tmp/wiki-library-extract.log
+
+set -euo pipefail
+LIBRARY="/home/sourov/wiki/user/my_library"
+OUT="$LIBRARY/extracted"
+LOG="/tmp/wiki-library-extract.log"
+WIKI_ROOT="/home/sourov/Documents/wiki-linux/wiki-linux"
+
+echo "[$(date)] Starting extraction" | tee -a "$LOG"
+
+mkdir -p "$OUT"
+
+cd "$LIBRARY"
+for zip in *.zip; do
+    [ -f "$zip" ] || continue
+    # Derive clean folder name: strip Google Drive timestamp suffix
+    base="${zip%.zip}"
+    base="${base//-20[0-9][0-9][0-9][0-9][0-9][0-9]T[0-9]*Z-*-00[0-9]/}"
+    base="${base//  / }"
+    dest="$OUT/$base"
+    mkdir -p "$dest"
+    count=$(ls "$dest" 2>/dev/null | wc -l)
+    if [ "$count" -gt 0 ]; then
+        echo "  SKIP (already has $count files): $base" | tee -a "$LOG"
+        continue
+    fi
+    echo "  Extracting: $zip → $base" | tee -a "$LOG"
+    unzip -q -o "$zip" -d "$dest" 2>>"$LOG" && echo "    OK" | tee -a "$LOG" || echo "    WARN: unzip error" | tee -a "$LOG"
+done
+
+# Also handle the wordpress zip
+WP="/home/sourov/wordpressfiles(9).zip"
+if [ -f "$WP" ]; then
+    dest="$OUT/wordpress-files"
+    mkdir -p "$dest"
+    count=$(ls "$dest" 2>/dev/null | wc -l)
+    if [ "$count" -eq 0 ]; then
+        echo "  Extracting wordpress zip" | tee -a "$LOG"
+        unzip -q -o "$WP" -d "$dest" 2>>"$LOG" && echo "    OK" | tee -a "$LOG"
+    fi
+fi
+
+echo "[$(date)] Extraction done. Counting content..." | tee -a "$LOG"
+find "$OUT" -type f | awk -F. '{print tolower($NF)}' | sort | uniq -c | sort -rn | head -20 | tee -a "$LOG"
+
+# Now copy text-processable files (pdf, docx, txt, md, epub) to wiki raw/ for ingestor
+echo "[$(date)] Staging text files for ingestor..." | tee -a "$LOG"
+STAGE="$WIKI_ROOT/raw/my_library"
+mkdir -p "$STAGE"
+find "$OUT" -type f \( -iname "*.pdf" -o -iname "*.docx" -o -iname "*.txt" -o -iname "*.epub" \) \
+    ! -path "*/\.*" | while read -r f; do
+    rel="${f#$OUT/}"
+    dest_file="$STAGE/${rel//\//__}"
+    [ -f "$dest_file" ] || cp "$f" "$dest_file"
+done
+echo "[$(date)] Staged $(ls "$STAGE" | wc -l) files for ingestor." | tee -a "$LOG"
+echo "DONE" | tee -a "$LOG"

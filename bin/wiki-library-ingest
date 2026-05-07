@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""wiki-library-ingest — Extract, organise, convert and index ~/wiki/user/my_library zips.
+
+Flow:
+  1. Unzip all archives → categorised subfolders under user/research/ and user/media/
+  2. Recursively extract nested .zip/.rar/.7z
+  3. Convert PDF/docx/pptx/odt → markdown via pandoc
+  4. Move audio/video → user/media/
+  5. Trigger wiki-kb-sync to re-index
+
+Usage:
+  wiki-library-ingest            # extract + convert + sync
+  wiki-library-ingest --dry-run  # preview only
+  wiki-library-ingest --extract-only  # skip conversion
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+# ── Config ────────────────────────────────────────────────────────────────────
+LIBRARY_DIR = Path.home() / "wiki/user/my_library"
+WIKI_ROOT   = Path.home() / "Documents/wiki-linux/wiki-linux"
+RESEARCH_DIR = WIKI_ROOT / "user/research"
+MEDIA_DIR   = WIKI_ROOT / "user/media"
+NOTES_DIR   = WIKI_ROOT / "user/notes"
+KB_SYNC     = WIKI_ROOT / "bin/wiki-kb-sync"
+
+AUDIO_EXT   = {".mp3", ".wav", ".wma", ".ogg", ".flac", ".m4a", ".aac"}
+VIDEO_EXT   = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv"}
+DOC_EXT     = {".pdf", ".docx", ".doc", ".pptx", ".ppt", ".odt", ".epub"}
+IMAGE_EXT   = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".tiff"}
+TEXT_EXT    = {".txt", ".md", ".html", ".htm"}
+
+# Category mapping by zip name keywords → destination subdir
+CATEGORY_MAP = {
+    "cambridge appeal":  "personal/cambridge-appeal",
+    "sourov deb":        "personal/sourov-deb",
+    "jane ryder":        "personal/jane-ryder-work",
+    "lesson framework":  "teaching/lesson-frameworks",
+    "trainees":          "teaching/trainees-2026",
+    "resources":         "teaching/course-resources",
+    "eu upper":          "teaching/eu-upper-intermediate",
+    "business result":   "teaching/business-result",
+    "etpedia":           "teaching/etpedia",
+    "kids":              "teaching/kids",
+    "files.zip":         None,  # skip — it's the extension zip
+}
+
+
+def _category_for(zip_name: str) -> str:
+    nl = zip_name.lower()
+    for key, cat in CATEGORY_MAP.items():
+        if key in nl:
+            return cat or "__skip__"
+    return "uncategorised"
+
+
+def _run(cmd: list, cwd=None, check=False):
+    return subprocess.run(cmd, capture_output=True, text=True, cwd=cwd,
+                          timeout=300, check=check)
+
+
+def _pandoc_available():
+    return shutil.which("pandoc") is not None
+
+
+def extract_nested(path: Path, dest: Path, dry_run: bool):
+    """Recursively extract zip/rar/7z nested archives."""
+    for f in list(path.rglob("*.zip")) + list(path.rglob("*.rar")) + list(path.rglob("*.7z")):
+        if f.parent == LIBRARY_DIR:
+            continue  # handled at top level
+        target = f.parent / f.stem
+        if target.exists():
+            continue
+        if dry_run:
+            print(f"  [NESTED] would extract {f.name}")
+            continue
+        target.mkdir(parents=True, exist_ok=True)
+        if f.suffix == ".zip":
+            _run(["unzip", "-q", "-o", str(f), "-d", str(target)])
+        elif f.suffix == ".rar":
+            _run(["unrar", "x", "-o+", str(f), str(target)])
+        elif f.suffix == ".7z":
+            _run(["7z", "x", str(f), f"-o{target}", "-y"])
+        print(f"  [NESTED] extracted {f.name}")
+
+
+def convert_docs(dest: Path, dry_run: bool):
+    """Convert all PDF/docx/pptx → markdown in-place using pandoc."""
+    if not _pandoc_available():
+        print("  [WARN] pandoc not found — skipping doc conversion. Install: sudo pacman -S pandoc")
+        return 0
+    converted = 0
+    for f in dest.rglob("*"):
+        if f.suffix.lower() not in DOC_EXT:
+            continue
+        md_out = f.with_suffix(".md")
+        if md_out.exists():
+            continue
+        if dry_run:
+            print(f"  [CONVERT] would pandoc {f.name} → {f.stem}.md")
+            continue
+        r = _run(["pandoc", str(f), "-o", str(md_out), "--wrap=none"])
+        if r.returncode == 0:
+            print(f"  [CONVERT] {f.name} → {f.stem}.md ✓")
+            converted += 1
+        else:
+            # PDF conversion may fail — try pdftotext fallback
+            if f.suffix.lower() == ".pdf" and shutil.which("pdftotext"):
+                txt = f.with_suffix(".txt")
+                _run(["pdftotext", str(f), str(txt)])
+                if txt.exists() and txt.stat().st_size > 0:
+                    txt.rename(md_out)
+                    print(f"  [CONVERT] {f.name} → {f.stem}.md (pdftotext) ✓")
+                    converted += 1
+    return converted
+
+
+def move_media(dest: Path, dry_run: bool):
+    """Move audio/video files to user/media/."""
+    moved = 0
+    for f in list(dest.rglob("*")):
+        ext = f.suffix.lower()
+        if ext in AUDIO_EXT | VIDEO_EXT:
+            rel = dest.name
+            media_target = MEDIA_DIR / rel / f.name
+            if dry_run:
+                print(f"  [MEDIA] would move {f.name} → user/media/{rel}/")
+                continue
+            media_target.parent.mkdir(parents=True, exist_ok=True)
+            if not media_target.exists():
+                shutil.copy2(f, media_target)
+                moved += 1
+    if moved:
+        print(f"  [MEDIA] copied {moved} audio/video files → user/media/")
+    return moved
+
+
+def process_zip(zip_path: Path, dry_run: bool, extract_only: bool):
+    cat = _category_for(zip_path.name)
+    if cat == "__skip__":
+        print(f"[SKIP] {zip_path.name}")
+        return
+
+    dest = RESEARCH_DIR / cat
+    print(f"\n[PROCESS] {zip_path.name}")
+    print(f"  → {dest.relative_to(WIKI_ROOT)}")
+
+    if not dry_run:
+        dest.mkdir(parents=True, exist_ok=True)
+
+    # Check already extracted
+    inner_dir = dest / zip_path.stem.split("-202605")[0].strip()
+    # Extract
+    if dry_run:
+        print(f"  [EXTRACT] would unzip to {dest}")
+    else:
+        r = _run(["unzip", "-q", "-n", str(zip_path), "-d", str(dest)])
+        if r.returncode not in (0, 1):
+            print(f"  [ERROR] unzip failed: {r.stderr[:100]}")
+            return
+        print(f"  [EXTRACT] done ✓")
+
+    # Nested archives
+    if not dry_run:
+        extract_nested(dest, dest, dry_run=False)
+
+    if not extract_only:
+        # Convert docs → markdown
+        n = convert_docs(dest, dry_run)
+        if n:
+            print(f"  [CONVERT] {n} files converted")
+
+        # Move media
+        move_media(dest, dry_run)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--extract-only", action="store_true")
+    args = parser.parse_args()
+
+    RESEARCH_DIR.mkdir(parents=True, exist_ok=True)
+    MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+
+    zips = sorted(LIBRARY_DIR.glob("*.zip"))
+    print(f"Found {len(zips)} zips in {LIBRARY_DIR}")
+
+    for z in zips:
+        process_zip(z, dry_run=args.dry_run, extract_only=args.extract_only)
+
+    # Also handle the .docx in library root
+    for f in LIBRARY_DIR.glob("*.docx"):
+        dest = RESEARCH_DIR / "personal" / f.name
+        if not args.dry_run:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dest)
+            if _pandoc_available():
+                _run(["pandoc", str(dest), "-o", str(dest.with_suffix(".md")), "--wrap=none"])
+        print(f"[DOCX] {f.name} → personal/")
+
+    if not args.dry_run:
+        # Re-sync KB
+        print("\n[KB-SYNC] Re-indexing wiki knowledge base...")
+        subprocess.Popen([sys.executable, str(KB_SYNC)],
+                         stdout=open("/tmp/wiki-kb-sync-post-ingest.log", "w"),
+                         stderr=subprocess.STDOUT)
+        print("[KB-SYNC] Running in background → /tmp/wiki-kb-sync-post-ingest.log")
+
+    print("\nDone.")
+
+
+if __name__ == "__main__":
+    main()

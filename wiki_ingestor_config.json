@@ -1,0 +1,11 @@
+{
+  "wiki_dir": "/home/sourov/Documents/wiki-linux/wiki-linux",
+  "output_subdir": "user/library",
+  "ledger_path": "/home/sourov/.local/share/wiki-linux/ingestor-ledger.db",
+  "log_path": "/tmp/wiki-ingestor.log",
+  "batch_dirs": ["/home/sourov/Documents/wiki-linux/wiki-linux/raw/my_library"],
+  "recursive": false,
+  "batch_on_start": false,
+  "llm_enabled": false,
+  "log_level": "INFO"
+}

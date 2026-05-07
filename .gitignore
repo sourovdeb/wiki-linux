@@ -11,6 +11,14 @@ _tmp/
 *.log
 _meta/daemon.log
 
+# Generated / derived content (too large for git, indexed in ChromaDB)
+user/library/
+raw/my_library/
+user/research/teaching/
+
+# Obsidian plugin data (contains API keys)
+.obsidian/plugins/bmo-chatbot/data.json
+
 # Editor
 .obsidian/workspace.json
 .DS_Store

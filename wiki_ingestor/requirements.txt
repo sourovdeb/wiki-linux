@@ -1,0 +1,8 @@
+# wiki_ingestor — Python dependencies
+# Install with: pip install -r requirements.txt
+# Or for everything including optional LLM support:
+# pip install -r requirements.txt "markitdown[all]" openai
+
+markitdown[all]>=0.1.5
+watchdog>=4.0.0
+openai>=1.0.0          # optional: only needed if llm_enabled = true (image captions via Ollama/OpenAI)

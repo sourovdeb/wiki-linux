@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=🗑️ Cleanup Policy
-Comment=Enforce keep/remove policy: disable autoupdate, mask tracker, review removals
-Exec=xfce4-terminal --title="Cleanup Policy" --hold --command="bash /home/sourov/Documents/wiki-linux/wiki-linux/WIKI-TOOLS/handoff/10-cleanup-keep-policy.sh"
-Icon=system-software-update
-Type=Application
-Terminal=false
-Categories=System;

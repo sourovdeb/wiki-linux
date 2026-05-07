@@ -11,10 +11,4 @@ Use `grep '^## \[' ~/wiki/_meta/log.md | tail -5` to inspect the most recent ent
 - cwd: `/home/sourov/Documents/wiki-linux/wiki-linux`
 - note: [[_meta/task-log/2026-04-30/215849-bootstrap]]
 - args: `(none)`
-## [2026-05-05 UTC] task | dashboard-update
-- status: success
-- exit_code: 0
-- cwd: `/home/sourov/Documents/wiki-linux/wiki-linux`
-- note: [[_meta/task-log/2026-05-05/220000-dashboard-update]]
-- args: `(dashboard, widgets, cleanup, session-record)`
 

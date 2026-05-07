@@ -1,8 +1,0 @@
-[Desktop Entry]
-Name=WordPress AutoPilot
-Comment=Click and play WordPress scheduling automation
-Exec=xfce4-terminal --title="WordPress AutoPilot" --hold --command="bash /home/sourov/Documents/wiki-linux/wiki-linux/user/development/tools/wordpress-control/scripts/click_and_play.sh"
-Icon=applications-internet
-Type=Application
-Terminal=false
-Categories=Utility;

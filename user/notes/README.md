@@ -12,7 +12,6 @@ Short-form notes, logs, and scratch pages live here.
 
 ## Start Here
 
-- [[user/notes/my-day|Dashboard]] — the current working surface
 - [[START-HERE|Back to Start Here]]
 - [[user/README]]
 - [[system/overview]]

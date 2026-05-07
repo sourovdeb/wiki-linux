@@ -5,4 +5,5 @@ Exec=xdg-open /home/sourov/Documents/wiki-linux/wiki-linux/user/notes/my-day.md
 Icon=text-x-generic
 Type=Application
 Terminal=false
+Categories=Office;Utility;
 Categories=Utility;

@@ -38,10 +38,10 @@ Save a file to →          It becomes →
 
 ### 2. Search Your Wiki (the Search Box)
 
-Press the **keyboard shortcut** (set it up: XFCE Settings → Keyboard → Application Shortcuts → `/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-search-dialog` → bind to `Super+Space`) or run:
+Press the **keyboard shortcut** (set it up: XFCE Settings → Keyboard → Application Shortcuts → `wiki-search` → bind to `Super+Space`) or run:
 
 ```bash
-/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-search-dialog
+wiki-search
 ```
 
 You get a dialog. Choose:
@@ -49,8 +49,6 @@ You get a dialog. Choose:
 - **Search** — find keywords across all pages
 - **New Note** — create and open a note immediately
 - **Status** — check everything is running
-- **Open WebUI / Chromium AI / Firefox AI** — jump straight into browser-based local AI
-- **Trim Services** — review and disable non-essential services, including autoupdate-style clutter
 
 ---
 

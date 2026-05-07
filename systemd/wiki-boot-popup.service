@@ -1,0 +1,15 @@
+[Unit]
+Description=Wiki-Linux Boot Status Popup
+After=graphical-session.target wiki-ollama.service
+Wants=wiki-ollama.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/Documents/wiki-linux/wiki-linux/bin/wiki-boot-popup
+Environment=DISPLAY=:0
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target

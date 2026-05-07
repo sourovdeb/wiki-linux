@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""wiki-boot-popup — show a desktop notification with wiki status on login."""
+import subprocess
+import time
+import json
+import urllib.request
+import os
+from pathlib import Path
+
+WIKI_ROOT = Path.home() / "Documents/wiki-linux/wiki-linux"
+OLLAMA = "http://127.0.0.1:11434"
+OPENWEBUI = "http://127.0.0.1:8080"
+
+def run(cmd, timeout=3):
+    try:
+        return subprocess.check_output(cmd, shell=True, timeout=timeout, text=True, stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return ""
+
+def svc_status(name):
+    s = run(f"systemctl --user is-active {name}")
+    return "✓" if s == "active" else "✗"
+
+def ollama_ok():
+    try:
+        r = urllib.request.urlopen(OLLAMA + "/api/tags", timeout=2)
+        j = json.loads(r.read())
+        models = j.get("models", [])
+        return f"✓ {len(models)} models"
+    except Exception:
+        return "✗ offline"
+
+def webui_ok():
+    try:
+        urllib.request.urlopen(OPENWEBUI, timeout=2)
+        return f"✓ :8080"
+    except Exception:
+        return "✗ offline"
+
+def page_count():
+    c = run(f'find "{WIKI_ROOT}" -name "*.md" -not -path "*/.git/*" | wc -l')
+    return c or "0"
+
+def last_commit():
+    c = run(f'git -C "{WIKI_ROOT}" log -1 --format="%ar"')
+    return c or "never"
+
+def main():
+    # Short wait for desktop to be ready
+    time.sleep(3)
+
+    pages = page_count()
+    commit = last_commit()
+    ollama = ollama_ok()
+    webui = webui_ok()
+    monitor = svc_status("wiki-monitor.service")
+    sync = svc_status("wiki-sync.timer")
+
+    title = "⚡ Wiki-Linux Ready"
+    body = (
+        f"📄 {pages} pages  ·  🔄 {commit}\n"
+        f"🤖 Ollama {ollama}  ·  🌐 WebUI {webui}\n"
+        f"👁 Monitor {monitor}  ·  ⏱ Sync {sync}\n"
+        f"\nSuper+Space → search"
+    )
+
+    subprocess.run([
+        "notify-send",
+        "--urgency=low",
+        "--expire-time=8000",
+        "--icon=dialog-information",
+        "--app-name=wiki-linux",
+        title, body
+    ], check=False)
+
+if __name__ == "__main__":
+    main()

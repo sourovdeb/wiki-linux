@@ -1,0 +1,10 @@
+{
+  "id": "wiki-startup",
+  "name": "Wiki-Linux Startup",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Shows wiki-linux status popup on boot and provides quick actions.",
+  "author": "sourov",
+  "authorUrl": "",
+  "isDesktopOnly": true
+}

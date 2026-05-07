@@ -210,7 +210,11 @@ def cmd_batch(cfg: IngestorConfig, args):
         pattern = "**/*" if cfg.recursive else "*"
         for file in p.glob(pattern):
             if file.is_file():
-                result = converter.convert(file)
+                try:
+                    result = converter.convert(file)
+                except BaseException as exc:
+                    logging.warning("Skipping %s: %s", file.name, exc)
+                    result = None
                 if result:
                     converted += 1
                 else:

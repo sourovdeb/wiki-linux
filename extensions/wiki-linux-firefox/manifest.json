@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Wiki-Linux Assistant",
+  "version": "1.0.0",
+  "description": "Local Ollama assistant with wiki-ingestor integration for Firefox",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Wiki-Linux Assistant"
+  },
+  "sidebar_action": {
+    "default_panel": "sidebar.html",
+    "default_title": "Wiki Assistant"
+  },
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon-128.svg"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

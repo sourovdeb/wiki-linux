@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Wiki-Linux System Status</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <div class="popup-header">
+      <h1>System Status</h1>
+    </div>
+
+    <div class="status-grid">
+      <div class="status-card">
+        <div class="status-icon">🤖</div>
+        <div class="status-info">
+          <div class="status-name">Ollama</div>
+          <div id="ollamaStatus" class="status-value">Checking...</div>
+          <div class="status-port">127.0.0.1:11434</div>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-icon">🌐</div>
+        <div class="status-info">
+          <div class="status-name">Open WebUI</div>
+          <div id="webuiStatus" class="status-value">Checking...</div>
+          <div class="status-port">127.0.0.1:8080</div>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div class="status-icon">📚</div>
+        <div class="status-info">
+          <div class="status-name">Wiki Ingestor</div>
+          <div id="ingestorStatus" class="status-value">Installed</div>
+          <div class="status-port">v1.0.0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-section">
+      <h3>Quick Actions</h3>
+      <button id="openSidebarBtn" class="action-btn sidebar-btn">📖 Open Sidebar</button>
+      <button id="openOllamaBtn" class="action-btn">🤖 Open Ollama</button>
+      <button id="openWebUIBtn" class="action-btn">🌐 Open Web UI</button>
+    </div>
+
+    <div class="info-section">
+      <h3>Available Models</h3>
+      <div id="modelsList" class="models-list">
+        <div class="loading">Loading models...</div>
+      </div>
+    </div>
+
+    <div class="footer-popup">
+      <small>Wiki-Linux Firefox Assistant v1.0.0</small><br>
+      <small id="lastUpdate"></small>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

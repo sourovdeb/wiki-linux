@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Wiki-Linux Assistant</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div class="sidebar-container">
+    <div class="header">
+      <h1>🗂️ Wiki Assistant</h1>
+      <span id="systemStatus" class="status-indicator">●</span>
+    </div>
+
+    <div class="model-selector">
+      <label>Model:</label>
+      <select id="modelSelect">
+        <option value="llama3.2:3b">llama3.2:3b (Fast)</option>
+        <option value="qwen2.5-coder:3b">qwen2.5-coder:3b (Code)</option>
+      </select>
+    </div>
+
+    <div class="quick-actions">
+      <button id="summarizeBtn" class="action-btn">📝 Summarize</button>
+      <button id="searchBtn" class="action-btn">🔍 Search</button>
+      <button id="crawlBtn" class="action-btn">🕷️ Crawl Links</button>
+      <button id="pdfBtn" class="action-btn">📄 Find PDFs</button>
+      <button id="formBtn" class="action-btn">📋 Forms</button>
+      <button id="saveWikiBtn" class="action-btn wiki-save">💾 Save to Wiki</button>
+    </div>
+
+    <div class="composer">
+      <input type="text" id="promptInput" placeholder="Ask Ollama..." class="composer-input">
+      <button id="sendBtn" class="send-btn">Send</button>
+    </div>
+
+    <div id="responseArea" class="response-area">
+      <div class="placeholder">Select an action above or type your question</div>
+    </div>
+
+    <div class="footer">
+      <small>Ollama @ 127.0.0.1:11434</small>
+    </div>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

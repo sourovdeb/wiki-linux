@@ -1,0 +1,10 @@
+[Unit]
+Description=Wiki File Relocator Timer
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Unit=wiki-file-relocate.service
+
+[Install]
+WantedBy=timers.target

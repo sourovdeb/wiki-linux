@@ -1,0 +1,10 @@
+[Unit]
+Description=Wiki Auto-Unzip Timer
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Unit=wiki-auto-unzip.service
+
+[Install]
+WantedBy=timers.target

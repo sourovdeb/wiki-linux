@@ -1,0 +1,10 @@
+[Unit]
+Description=Wiki Live Wallpaper Timer
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=30sec
+Unit=wiki-wallpaper.service
+
+[Install]
+WantedBy=timers.target

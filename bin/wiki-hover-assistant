@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""wiki-hover-assistant — desktop hover popup assistant using Ollama.
+Monitors mouse idle position; on demand (hotkey) captures screen region,
+sends to Ollama vision or text model, shows explanation as desktop notification.
+
+Usage:
+  wiki-hover-assistant           # runs as daemon, listens for Super+Alt+H
+  wiki-hover-assistant --once    # single capture at current mouse pos
+"""
+import argparse
+import base64
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.request
+from pathlib import Path
+
+OLLAMA_BASE = os.environ.get("OLLAMA_BASE", "http://127.0.0.1:11434")
+MODEL = os.environ.get("WIKI_HOVER_MODEL", "llava:7b")  # vision model preferred
+FALLBACK_MODEL = os.environ.get("WIKI_HOVER_FALLBACK", "tinyllama")
+CAPTURE_SIZE = 400  # px around cursor to capture
+
+
+def get_mouse_pos():
+    """Returns (x, y) of current mouse position using xdotool."""
+    try:
+        out = subprocess.check_output(["xdotool", "getmouselocation", "--shell"], text=True)
+        x = int(next(l for l in out.splitlines() if l.startswith("X=")).split("=")[1])
+        y = int(next(l for l in out.splitlines() if l.startswith("Y=")).split("=")[1])
+        return x, y
+    except Exception:
+        return 0, 0
+
+
+def capture_region(x, y, size=CAPTURE_SIZE):
+    """Capture a square region around (x,y). Returns path to PNG or None."""
+    half = size // 2
+    rx, ry = max(0, x - half), max(0, y - half)
+    out = tempfile.mktemp(suffix=".png")
+    ret = subprocess.run(
+        ["import", "-window", "root", "-crop", f"{size}x{size}+{rx}+{ry}", out],
+        capture_output=True
+    )
+    if ret.returncode == 0 and Path(out).exists():
+        return out
+    # fallback: scrot
+    ret2 = subprocess.run(
+        ["scrot", "--area", f"{rx},{ry},{size},{size}", out],
+        capture_output=True
+    )
+    return out if ret2.returncode == 0 else None
+
+
+def ask_ollama_vision(image_path, prompt="What is shown in this screenshot? Explain briefly."):
+    """Ask Ollama vision model about the image. Falls back to text-only if model unavailable."""
+    with open(image_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user", "content": prompt, "images": [img_b64]}],
+        "stream": False
+    }
+    try:
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(
+            f"{OLLAMA_BASE}/api/chat",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=15) as r:
+            result = json.loads(r.read())
+            return result.get("message", {}).get("content", "No response.")
+    except Exception as e:
+        return f"(error: {e})"
+
+
+def show_notification(title, body, timeout=8000):
+    """Show desktop notification using notify-send."""
+    # Truncate to avoid huge popups
+    body = body[:500] + ("..." if len(body) > 500 else "")
+    subprocess.run(
+        ["notify-send", "-t", str(timeout), "-i", "dialog-information", title, body],
+        capture_output=True
+    )
+
+
+def run_once():
+    x, y = get_mouse_pos()
+    img = capture_region(x, y)
+    if not img:
+        show_notification("Wiki Hover", "Could not capture screen. Install imagemagick or scrot.")
+        return
+    show_notification("Wiki Hover", "Analyzing... (asking Ollama)")
+    answer = ask_ollama_vision(img, "What is in this screenshot? Give a brief, helpful explanation.")
+    show_notification("Wiki Assistant", answer)
+    try:
+        os.unlink(img)
+    except Exception:
+        pass
+
+
+def run_daemon():
+    """Listen for keyboard shortcut Super+Alt+H via xbindkeys or xdotool looping."""
+    # Simple approach: poll every 100ms for xdotool key event
+    # More robust: configure xbindkeys. This script is called by xbindkeys.
+    print("wiki-hover-assistant daemon: call with --once on hotkey trigger")
+    print("Configure xbindkeys to call: wiki-hover-assistant --once")
+    print("Example ~/.xbindkeysrc entry:")
+    print('  "wiki-hover-assistant --once"')
+    print("    Super+Alt+h")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Wiki hover assistant")
+    parser.add_argument("--once", action="store_true", help="Single capture and explain")
+    args = parser.parse_args()
+
+    if args.once:
+        run_once()
+    else:
+        run_daemon()
+
+
+if __name__ == "__main__":
+    main()

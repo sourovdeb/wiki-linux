@@ -1,0 +1,22 @@
+#!/bin/bash
+# wiki-auto-unzip — find and extract zip files in wiki-linux directory tree
+# Run by wiki-auto-unzip.timer every 5 minutes
+
+WATCH_DIR="$HOME/Documents/wiki-linux"
+LOG_TAG="wiki-auto-unzip"
+
+find "$WATCH_DIR" -maxdepth 4 -name "*.zip" -newer /tmp/.wiki-unzip-lastrun 2>/dev/null | while read -r zipfile; do
+  target_dir="${zipfile%.zip}"
+  if [[ -f "$zipfile" ]]; then
+    logger -t "$LOG_TAG" "Extracting: $zipfile → $target_dir"
+    mkdir -p "$target_dir"
+    if unzip -q -o "$zipfile" -d "$target_dir" 2>/dev/null; then
+      logger -t "$LOG_TAG" "Success: $zipfile extracted"
+    else
+      logger -t "$LOG_TAG" "Failed to extract: $zipfile"
+      rmdir "$target_dir" 2>/dev/null
+    fi
+  fi
+done
+
+touch /tmp/.wiki-unzip-lastrun

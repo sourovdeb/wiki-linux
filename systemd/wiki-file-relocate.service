@@ -1,0 +1,10 @@
+[Unit]
+Description=Wiki File Relocator
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/Documents/wiki-linux/wiki-linux/.venv/bin/python3 %h/Documents/wiki-linux/wiki-linux/bin/wiki-file-relocate
+WorkingDirectory=%h/Documents/wiki-linux/wiki-linux
+StandardOutput=journal
+StandardError=journal

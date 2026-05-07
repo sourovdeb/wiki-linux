@@ -6,7 +6,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-WIKI_ROOT = Path(os.environ.get("WIKI_ROOT", str(Path.home() / "wiki"))).expanduser()
+WIKI_ROOT = Path(os.environ.get("WIKI_ROOT", str(Path.home() / "Documents/wiki-linux/wiki-linux"))).expanduser()
 OUT_DIR = Path.home() / ".cache" / "wiki-wallpaper"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 OUT_FILE = OUT_DIR / "wiki-live.png"

@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""wiki-file-relocate — move files to appropriate wiki-linux locations every 30 minutes.
+Rules are conservative: only moves files with known extensions to matched wiki subdirs.
+Never moves system files, hidden files, or anything that would break structure.
+"""
+import os
+import shutil
+import logging
+from pathlib import Path
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [wiki-relocate] %(message)s")
+log = logging.getLogger("wiki-relocate")
+
+HOME = Path.home()
+WIKI = HOME / "Documents" / "wiki-linux" / "wiki-linux"
+
+# Source dirs to scan (non-recursive for safety)
+SCAN_DIRS = [
+    HOME / "Downloads",
+    HOME / "Desktop",
+    HOME / "Documents",
+]
+
+# Extension → destination mapping
+RULES = {
+    ".pdf":  WIKI / "user" / "research",
+    ".epub": WIKI / "user" / "research",
+    ".txt":  WIKI / "user" / "notes",
+    ".md":   WIKI / "user" / "notes",
+    ".html": WIKI / "raw",
+    ".htm":  WIKI / "raw",
+    ".png":  WIKI / "user" / "notes",
+    ".jpg":  WIKI / "user" / "notes",
+    ".jpeg": WIKI / "user" / "notes",
+}
+
+# Files to never touch
+PROTECTED = {".git", ".gitignore", "config.json", "requirements.txt"}
+
+def is_safe_to_move(path: Path) -> bool:
+    """Only move regular files that are not hidden, not locked, and not system-critical."""
+    if path.name.startswith("."):
+        return False
+    if path.name in PROTECTED:
+        return False
+    if not path.is_file():
+        return False
+    # Don't move if recently modified (< 60s = still downloading)
+    import time
+    if time.time() - path.stat().st_mtime < 60:
+        return False
+    return True
+
+def relocate():
+    for scan_dir in SCAN_DIRS:
+        if not scan_dir.exists():
+            continue
+        for f in scan_dir.iterdir():
+            if not is_safe_to_move(f):
+                continue
+            ext = f.suffix.lower()
+            dest_dir = RULES.get(ext)
+            if dest_dir is None:
+                continue
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            dest = dest_dir / f.name
+            if dest.exists():
+                # Don't overwrite; skip
+                continue
+            try:
+                shutil.move(str(f), str(dest))
+                log.info(f"Moved {f} → {dest}")
+            except Exception as e:
+                log.warning(f"Failed to move {f}: {e}")
+
+if __name__ == "__main__":
+    relocate()

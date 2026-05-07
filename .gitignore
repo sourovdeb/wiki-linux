@@ -1,13 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Wiki runtime
 _tmp/
 *.log
-*.pyc
-__pycache__/
+_meta/daemon.log
+
+# Editor
 .obsidian/workspace.json
-.obsidian/workspaces.json
-_meta/reports/extension-build/
+.DS_Store
+Thumbs.db
+.vscode/
 
-
-
-
-# Ignore Smart Environment folder
-.smart-env
+# Secrets
+.env
+*.key

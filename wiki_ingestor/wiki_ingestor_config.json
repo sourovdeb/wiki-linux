@@ -1,0 +1,22 @@
+{
+  "_comment": "wiki_ingestor configuration. Edit this file, then restart the service.",
+
+  "watch_dirs": [
+    "~/Documents",
+    "~/Downloads"
+  ],
+
+  "output_subdir": "converted",
+
+  "recursive": true,
+  "debounce_seconds": 2.0,
+  "batch_on_start": true,
+
+  "llm_enabled": false,
+  "_llm_comment": "Set llm_enabled=true + llm_provider='ollama' to caption images via a local Ollama model (e.g. llava)",
+  "llm_provider": "ollama",
+  "llm_model": "llava",
+  "llm_base_url": "http://localhost:11434/v1",
+
+  "log_level": "INFO"
+}

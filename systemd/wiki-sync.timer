@@ -1,0 +1,13 @@
+[Unit]
+Description=Wiki-Linux git auto-commit timer
+Documentation=file://%h/wiki-linux/README.md
+
+[Timer]
+# Run 5 minutes after login, then every 5 minutes thereafter.
+# Change OnUnitActiveSec to adjust the commit frequency.
+OnBootSec=5min
+OnUnitActiveSec=5min
+Unit=wiki-sync.service
+
+[Install]
+WantedBy=timers.target

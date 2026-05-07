@@ -1,62 +1,171 @@
+# wiki-linux
+
+> A wiki-native knowledge layer for Linux, Windows, and macOS — built on Andrej
+> Karpathy's [LLM Wiki pattern](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-16%20passing-brightgreen.svg)](tests/)
+
+**The short version:** `~/wiki/` is a Git-tracked directory of Markdown files.
+A daemon watches your system configs with inotify and uses a local LLM (Ollama)
+to generate and maintain wiki pages for them. Your `/etc` is never touched.
+Your OS works exactly as before. You get a searchable, cross-linked,
+LLM-queryable knowledge base built on top.
+
 ---
-title: Wiki Index
-created: 2026-04-30T21:58:48.660535+00:00
-updated: 2026-04-30T21:58:48.660535+00:00
-tags: [home, index]
-cssclasses: [wiki-index]
----
 
-# Wiki Index
-
-
-This vault is the main knowledge and navigation space for the machine.
-
-If you are new here, start with [[START-HERE|Start Here]].
-
-## Most Common Pages
-
-- [[START-HERE|Start Here]]
-- [[system/overview|Machine overview]]
-- [[sources/README|Add and review sources]]
-- [[_meta/recent|Recent changes]]
-- [[_meta/log|Activity log]]
-
-## Browse By Area
-
-- [[sources/README|Sources]]
-- [[system/README|System]]
-- [[user/notes/README|Notes]]
-- [[user/projects/README|Projects]]
-- [[user/research/README|Research]]
-- [[_meta/index|Full index]]
-
-## What You Can Do Here
-
-- read simple summaries of system files
-- collect documents and notes into one place
-- ask questions against the wiki
-- review what changed recently
-- run maintenance checks
-
-## Common Commands
+## Quick Start (Arch Linux)
 
 ```bash
-wiki bootstrap
-wiki ingest ~/wiki-sources/inbox/example.md
+git clone https://github.com/sourovdeb/wiki-linux ~/wiki-linux
+cd ~/wiki-linux
+bash install.sh
+
+# Pull your chosen model
+ollama pull mistral        # or: llama3.2 / phi3 / tinyllama
+
+# Enable services
+systemctl --user enable --now wiki-monitor
+systemctl --user enable --now wiki-sync.timer
+
+# Use it
+wiki new "My first note"
 wiki ask "What does my pacman.conf do?"
-wiki lint
-wiki search "gpu"
-wiki fix "pacman keyring errors during update"
+wiki status
 ```
 
-## Plain Language Guide
+For other platforms see **WINDOWS_AGENT_TASKS.md** or **MACOS_AGENT_TASKS.md**.
 
-- Sources = original files you want the system to learn from.
-- System = readable explanations of machine configuration.
-- Notes and Projects = your own working pages.
-- Reports = automatic health checks for the wiki.
+---
 
-## Viewers
+## Repository Layout
 
-- This vault can be browsed in Obsidian, terminal markdown tools, or any editor.
-- Obsidian is usually the easiest option for non-technical users because links and folders are clickable.
+```
+wiki-linux/
+├── README.md                ← you are here
+├── SKILL_FLOOR.md           ← plain-language guide for non-technical users
+├── WIKI_AGENT.md            ← LLM idea file: paste into any AI agent
+├── AGENT_PLAYBOOK.md        ← explicit step-by-step playbook for any agent
+├── AGENTS.md                ← agent schema (Codex, Claude Code, etc.)
+├── CLAUDE.md                ← Claude Code specific schema
+├── LINUX_AGENT_TASKS.md     ← setup steps for Linux agents
+├── WINDOWS_AGENT_TASKS.md   ← setup steps for Windows agents
+├── MACOS_AGENT_TASKS.md     ← setup steps for macOS agents
+├── CODESPACES_AGENT.md      ← GitHub Codespaces / cloud agents
+├── CODESPACES_INTERNAL.md   ← internal Codespaces environment facts
+├── SUPPORT_POPUP.md         ← wiki-notify popup helper
+├── LICENSE                  ← MIT
+├── config.json              ← configuration (copy to ~/.config/wiki-linux/)
+├── install.sh               ← idempotent installer
+├── requirements.txt         ← Python deps
+├── bin/wiki                 ← CLI dispatcher
+├── src/                     ← Python daemon modules
+│   ├── config.py, monitor.py, llm.py
+│   ├── indexer.py, search.py, sync.py
+│   └── agent/ingest.py      ← messy-user auto-organiser
+├── systemd/                 ← user-level service and timer units
+├── templates/               ← Jinja2 page templates
+├── tests/                   ← pytest unit tests
+├── references/              ← vendored reference docs
+│   ├── karpathy-llm-wiki.md ← the original LLM Wiki gist (copy)
+│   └── archwiki.md          ← ArchWiki install + usage guide
+└── .devcontainer/           ← Codespaces config
+```
+
+---
+
+## Architecture
+
+```
+/etc/pacman.conf  (never modified)
+      ↓ inotify (read-only)
+monitor.py → llm.py (Ollama API, format=json)
+      ↓ writes
+~/wiki/system/config/pacman.conf.md
+      ↓ every 5 min
+git auto-commit → optional remote push
+      ↓ interface
+Obsidian (GUI) │ mdt (TUI) │ wiki CLI │ ripgrep+RAG
+```
+
+Data flows **one direction only**: source file → wiki page. Never the
+reverse. A hallucinating LLM cannot damage your system configuration.
+
+---
+
+## Using with AI Agents
+
+**Paste `WIKI_AGENT.md` into any LLM agent.** It is the master instruction
+file — self-contained, model-agnostic, works with TinyLlama through Opus.
+
+| Agent | Entry file |
+|---|---|
+| **Non-technical user** | `SKILL_FLOOR.md` (plain-language guide) |
+| Claude Code | `CLAUDE.md` |
+| OpenAI Codex | `AGENTS.md` |
+| Any other LLM | `WIKI_AGENT.md` + `AGENT_PLAYBOOK.md` |
+| GitHub Codespaces | `CODESPACES_AGENT.md` + `CODESPACES_INTERNAL.md` |
+| Linux platform tasks | `LINUX_AGENT_TASKS.md` |
+| Windows platform tasks | `WINDOWS_AGENT_TASKS.md` |
+| macOS platform tasks | `MACOS_AGENT_TASKS.md` |
+
+---
+
+## What It Looks Like Day-to-Day
+
+You edit `/etc/pacman.conf`. Two seconds later, without any action from you,
+`~/wiki/system/config/pacman.conf.md` is updated with a human-readable
+explanation of the file, the verbatim contents in a code block, a timestamp,
+and cross-links to related wiki pages.
+
+You want to remember why you changed something six months ago. You run
+`wiki ask "Why did I add the multilib repo?"`. The RAG pipeline searches
+your wiki, finds the relevant note, and the LLM synthesises an answer from
+your own writing.
+
+---
+
+## Configuration
+
+Copy `config.json` to `~/.config/wiki-linux/config.json` and edit:
+
+```jsonc
+{
+  "ollama": { "model": "mistral" },      // tinyllama / llama3.2 / phi3
+  "monitor": {
+    "etc_allowlist": ["/etc/pacman.conf", "/etc/fstab", "..."]
+  },
+  "git": { "remote": "origin" }          // push target, empty = no push
+}
+```
+
+---
+
+## Invariants the Code Enforces
+
+- Never writes outside `~/wiki` (path-escape check on every LLM output)
+- Never writes to `/etc` or any system path
+- Suppresses its own writes (prevents inotify feedback loops)
+- Runs as normal user, no root, no fanotify
+- LLM output always validated as JSON before any file write
+
+These invariants are unit-tested in `tests/`.
+
+---
+
+## Testing
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pytest tests/
+```
+
+Tests do not require a live Ollama instance — `ollama.generate` is mocked.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE)

@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# bin/wiki-notify — Linux desktop toast wrapper for wiki-linux.
+# Installed to ~/.local/bin/wiki-notify by install.sh.
+#
+# Usage: wiki-notify "<title>" "<message>" [--open <wiki-page>] [--level info|warn|error]
+#
+# Examples:
+#   wiki-notify "Ingested" "pacman.conf documented" --open system/config/pacman.conf
+#   wiki-notify "Lint warning" "3 orphan pages found" --open _meta/lint-report --level warn
+#   wiki-notify "Daemon failed" "Ollama not reachable on :11434" --level error
+
+set -euo pipefail
+
+TITLE="${1:?title required}"
+MESSAGE="${2:?message required}"
+shift 2
+
+OPEN_PAGE=""
+LEVEL="normal"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --open)  OPEN_PAGE="$2"; shift 2 ;;
+    --level) case "$2" in
+               info)  LEVEL="low"      ;;
+               warn)  LEVEL="normal"   ;;
+               error) LEVEL="critical" ;;
+             esac; shift 2 ;;
+    *) shift ;;
+  esac
+done
+
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+ICON="$WIKI_ROOT/.icon.png"
+[[ -f "$ICON" ]] || ICON="text-x-generic"
+
+# Send the notification (requires libnotify / notify-send).
+if command -v notify-send &>/dev/null; then
+  notify-send \
+    --urgency="$LEVEL" \
+    --icon="$ICON" \
+    --app-name="wiki" \
+    "$TITLE" "$MESSAGE"
+fi
+
+# Always log to _meta/notifications.log so the daemon can review what fired.
+LOG_DIR="$WIKI_ROOT/_meta"
+mkdir -p "$LOG_DIR"
+printf '%s  [%s]  %s — %s\n' \
+  "$(date -Iseconds)" "$LEVEL" "$TITLE" "$MESSAGE" \
+  >> "$LOG_DIR/notifications.log"
+
+# If --open given, append the page path to the log so the user can
+# find it with: wiki open _meta/notifications
+if [[ -n "$OPEN_PAGE" ]]; then
+  printf '  → %s/%s.md\n' "$WIKI_ROOT" "$OPEN_PAGE" \
+    >> "$LOG_DIR/notifications.log"
+fi

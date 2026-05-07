@@ -28,6 +28,9 @@
 > Together these produce the visual outcome the user wants. Nothing
 > below this line will damage Windows.
 
+For a complete guide to removing Microsoft bloat and blocking telemetry
+before setting up the wiki, see **[free_windows_debloat_guide.md](free_windows_debloat_guide.md)**.
+
 ---
 
 ## TARGET SYSTEMS

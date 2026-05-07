@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""wiki-kb-sync — Sync wiki markdown files into OpenWebUI my_wiki_knowledge.
+
+Usage:
+  wiki-kb-sync              # incremental sync (new/changed files only)
+  wiki-kb-sync --full       # wipe KB and re-upload everything
+  wiki-kb-sync --status     # show KB stats only
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+# ── Config ──────────────────────────────────────────────────────────────────
+WIKI_ROOT   = Path.home() / "Documents/wiki-linux/wiki-linux"
+OPENWEBUI   = "http://127.0.0.1:8080"
+DB_PATH     = Path.home() / ".local/share/wiki-linux/openwebui-data/webui.db"
+LEDGER_PATH = WIKI_ROOT / "_meta/kb-sync-ledger.json"
+KB_NAME     = "my_wiki_knowledge"
+
+EXCLUDE_DIRS = {
+    "node_modules", ".obsidian", ".venv", "WIKI-TOOLS",
+    ".git", "__pycache__", ".history",
+}
+EXCLUDE_FILES = {"example.md"}
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _get_api_key() -> str:
+    import sqlite3
+    conn = sqlite3.connect(str(DB_PATH))
+    row = conn.execute("SELECT key FROM api_key ORDER BY created_at DESC LIMIT 1").fetchone()
+    conn.close()
+    if not row:
+        sys.exit("No API key found in DB. Run wiki-kb-sync --setup first.")
+    return row[0]
+
+
+def _curl(method: str, path: str, key: str, **kwargs) -> dict:
+    url = f"{OPENWEBUI}{path}"
+    cmd = ["curl", "-s", "-X", method, url, "-H", f"Authorization: Bearer {key}"]
+    if "json" in kwargs:
+        cmd += ["-H", "Content-Type: application/json", "-d", json.dumps(kwargs["json"])]
+    if "file_path" in kwargs:
+        fp = kwargs["file_path"]
+        cmd += ["-F", f"file=@{fp};type=text/plain"]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    try:
+        return json.loads(r.stdout)
+    except Exception:
+        return {"_raw": r.stdout[:200], "_stderr": r.stderr[:100]}
+
+
+def _file_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+
+
+def _load_ledger() -> dict:
+    if LEDGER_PATH.exists():
+        try:
+            return json.loads(LEDGER_PATH.read_text())
+        except Exception:
+            pass
+    return {}
+
+
+def _save_ledger(ledger: dict):
+    LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
+    LEDGER_PATH.write_text(json.dumps(ledger, indent=2))
+
+
+def _collect_md_files() -> list[Path]:
+    files = []
+    for f in WIKI_ROOT.rglob("*.md"):
+        # Skip symlinks to avoid loops
+        if f.is_symlink():
+            continue
+        skip = False
+        for part in f.relative_to(WIKI_ROOT).parts:
+            if part in EXCLUDE_DIRS:
+                skip = True
+                break
+        if skip:
+            continue
+        if f.name in EXCLUDE_FILES:
+            continue
+        files.append(f)
+    return sorted(files)
+
+
+def _get_or_create_kb(key: str) -> str:
+    """Return KB id, creating it if it doesn't exist."""
+    resp = _curl("GET", "/api/v1/knowledge/", key)
+    items = resp.get("items") or (resp if isinstance(resp, list) else [])
+    for item in items:
+        if item.get("name") == KB_NAME:
+            return item["id"]
+    # Create
+    resp = _curl("POST", "/api/v1/knowledge/create", key, json={
+        "name": KB_NAME,
+        "description": "Personal wiki knowledge base — processed notes, research, sources and system docs from wiki-linux",
+        "access_control": None,
+    })
+    kb_id = resp.get("id")
+    if not kb_id:
+        sys.exit(f"Failed to create knowledge base: {resp}")
+    print(f"Created KB '{KB_NAME}' id={kb_id}")
+    return kb_id
+
+
+def _delete_all_kb_files(kb_id: str, key: str):
+    """Remove all files currently in the KB."""
+    resp = _curl("GET", f"/api/v1/knowledge/{kb_id}", key)
+    files = resp.get("files") or []
+    for f in files:
+        fid = f.get("id") or (f.get("file") or {}).get("id")
+        if fid:
+            _curl("POST", f"/api/v1/knowledge/{kb_id}/file/remove", key, json={"file_id": fid})
+    print(f"Cleared {len(files)} existing files from KB.")
+
+
+def _upload_and_attach(kb_id: str, key: str, md_path: Path) -> str | None:
+    """Upload file and attach to KB. Returns file_id or None on error."""
+    resp = _curl("POST", "/api/v1/files/", key, file_path=str(md_path))
+    file_id = resp.get("id")
+    if not file_id:
+        print(f"  WARN: upload failed for {md_path.name}: {resp.get('_raw','?')}")
+        return None
+    resp2 = _curl("POST", f"/api/v1/knowledge/{kb_id}/file/add", key, json={"file_id": file_id})
+    if resp2.get("name") == KB_NAME or resp2.get("id") == kb_id:
+        return file_id
+    print(f"  WARN: attach failed for {md_path.name}: {resp2.get('detail','?')}")
+    return file_id  # uploaded but attach may have failed — keep in ledger
+
+
+# ── Commands ─────────────────────────────────────────────────────────────────
+
+def cmd_status(key: str):
+    kb_id = _get_or_create_kb(key)
+    resp = _curl("GET", f"/api/v1/knowledge/{kb_id}", key)
+    files = resp.get("files") or []
+    ledger = _load_ledger()
+    md_files = _collect_md_files()
+    print(f"KB:           {KB_NAME} ({kb_id})")
+    print(f"Files in KB:  {len(files)}")
+    print(f"Wiki MD files:{len(md_files)}")
+    print(f"Synced:       {len(ledger)}")
+    stale = [f for f in md_files if _file_hash(f) != ledger.get(str(f.relative_to(WIKI_ROOT)), {}).get("hash")]
+    print(f"Stale/new:    {len(stale)}")
+
+
+def cmd_sync(key: str, full: bool = False):
+    kb_id = _get_or_create_kb(key)
+    ledger = _load_ledger()
+    md_files = _collect_md_files()
+
+    if full:
+        _delete_all_kb_files(kb_id, key)
+        ledger = {}
+
+    to_sync = []
+    for f in md_files:
+        rel = str(f.relative_to(WIKI_ROOT))
+        h = _file_hash(f)
+        if full or ledger.get(rel, {}).get("hash") != h:
+            to_sync.append((f, rel, h))
+
+    if not to_sync:
+        print(f"KB up to date. {len(md_files)} files, nothing to sync.")
+        return
+
+    print(f"Syncing {len(to_sync)}/{len(md_files)} files to '{KB_NAME}'...")
+    ok = 0
+    for i, (path, rel, h) in enumerate(to_sync, 1):
+        print(f"  [{i}/{len(to_sync)}] {rel}", end=" ", flush=True)
+        # Remove old version if incremental
+        if not full and rel in ledger:
+            old_fid = ledger[rel].get("file_id")
+            if old_fid:
+                _curl("POST", f"/api/v1/knowledge/{kb_id}/file/remove", key, json={"file_id": old_fid})
+        fid = _upload_and_attach(kb_id, key, path)
+        if fid:
+            ledger[rel] = {"hash": h, "file_id": fid, "synced_at": int(time.time())}
+            ok += 1
+            print("✓")
+        else:
+            print("✗")
+        time.sleep(0.3)  # gentle rate limit
+
+    _save_ledger(ledger)
+    print(f"\nDone: {ok}/{len(to_sync)} synced. Ledger → {LEDGER_PATH}")
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(description="Sync wiki markdown → OpenWebUI knowledge base")
+    parser.add_argument("--full",   action="store_true", help="Wipe KB and re-upload all files")
+    parser.add_argument("--status", action="store_true", help="Show stats only")
+    args = parser.parse_args()
+
+    key = _get_api_key()
+
+    if args.status:
+        cmd_status(key)
+    elif args.full:
+        cmd_sync(key, full=True)
+    else:
+        cmd_sync(key, full=False)
+
+
+if __name__ == "__main__":
+    main()

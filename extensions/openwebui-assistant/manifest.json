@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Wiki OpenWebUI Assistant",
+  "version": "1.0.0",
+  "description": "Quick-access panel for OpenWebUI at 127.0.0.1:8080 with wiki-linux KB integration",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8080/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  },
+  "action": {
+    "default_title": "Wiki OpenWebUI",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png"
+  }
+}

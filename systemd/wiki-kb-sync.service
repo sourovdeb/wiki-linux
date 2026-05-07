@@ -1,0 +1,9 @@
+[Unit]
+Description=Wiki Knowledge Base Sync to OpenWebUI
+After=wiki-openwebui.service
+
+[Service]
+Type=oneshot
+ExecStart=%h/Documents/wiki-linux/wiki-linux/bin/wiki-kb-sync
+StandardOutput=append:%h/.local/share/wiki-linux/logs/wiki-kb-sync.log
+StandardError=append:%h/.local/share/wiki-linux/logs/wiki-kb-sync.log

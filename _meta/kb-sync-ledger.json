@@ -1,0 +1,692 @@
+{
+  ".github/agents/wiki-linux-gap-auditor.agent.md": {
+    "hash": "0d25e293747ce7c0",
+    "file_id": "0a4b6e92-30a8-40a5-a5d3-ea52d0179128",
+    "synced_at": 1778182225
+  },
+  "AGENT_PLAYBOOK.md": {
+    "hash": "32cd2d97898cd6df",
+    "file_id": "9c42421d-b8f5-4b00-b682-f25d9c235534",
+    "synced_at": 1778182226
+  },
+  "ARCH-SYSTEM-RULES.md": {
+    "hash": "9265b4f299fee045",
+    "file_id": "232a2d72-e74b-49b2-8bf3-f17db630bfbb",
+    "synced_at": 1778182227
+  },
+  "BMO/Profiles/BMO.md": {
+    "hash": "17dadf95583afdb9",
+    "file_id": "5b40f3a2-84b9-4d87-beef-01d0e86b78cb",
+    "synced_at": 1778182227
+  },
+  "CLINE-INSTRUCTIONS.md": {
+    "hash": "0f2da6d1183a9551",
+    "file_id": "b39f2b0a-7a20-46c2-bbb4-a9613aece37b",
+    "synced_at": 1778182229
+  },
+  "CODESPACES_AGENT.md": {
+    "hash": "5787522ca1ccd533",
+    "file_id": "1f997687-65b6-456c-8d73-4fb24a1b1891",
+    "synced_at": 1778182229
+  },
+  "CODESPACES_INTERNAL.md": {
+    "hash": "da9c647ccdc03689",
+    "file_id": "a5ef6752-4f20-48b8-93d1-6d216f404c0c",
+    "synced_at": 1778182230
+  },
+  "FINAL-SYSTEM-STATUS.md": {
+    "hash": "bce58e7804d9d770",
+    "file_id": "3a26750d-3c85-4fca-b9cb-2bc6c4f079a8",
+    "synced_at": 1778182231
+  },
+  "FIREFOX-CHROMIUM-COMPARISON.md": {
+    "hash": "5f1bfe9b9bae6964",
+    "file_id": "175cc9c4-f715-415d-a168-1fae9e1e57ec",
+    "synced_at": 1778182232
+  },
+  "GUIDE.md": {
+    "hash": "4df7a069ca205bd9",
+    "file_id": "eebd4f9d-9f40-4d7e-a1f3-3042fbc0f26c",
+    "synced_at": 1778182233
+  },
+  "HOW-TO-USE-DAILY.md": {
+    "hash": "0d1a99d2e4829609",
+    "file_id": "9b2c9377-d5ae-4835-b9a2-6bec9ca94c02",
+    "synced_at": 1778182234
+  },
+  "LINUX_AGENT_TASKS.md": {
+    "hash": "a961b77f14cadc50",
+    "file_id": "cd30c83d-b03e-40f2-8534-e61b7e5bcad5",
+    "synced_at": 1778182234
+  },
+  "MACOS_AGENT_TASKS.md": {
+    "hash": "6f8e835e758ae88c",
+    "file_id": "728110d8-027c-44a9-ad99-a14a41168a2b",
+    "synced_at": 1778182235
+  },
+  "OBSIDIAN-SYSTEM-BLUEPRINT.md": {
+    "hash": "5f04e46530eb3f45",
+    "file_id": "75458881-2da5-4aa5-b795-157ffa2d6112",
+    "synced_at": 1778182237
+  },
+  "README.md": {
+    "hash": "5254bdf045ac2db6",
+    "file_id": "8b304482-3cb3-4313-a2b5-0e3e4dff897d",
+    "synced_at": 1778182237
+  },
+  "REPRODUCIBILITY-CHECKLIST.md": {
+    "hash": "8f49eee6595afc65",
+    "file_id": "0114a000-fbbf-4237-a270-9437ae3fa2cd",
+    "synced_at": 1778182238
+  },
+  "SESSION-SUMMARY-2026-05-02.md": {
+    "hash": "60031a287be92a59",
+    "file_id": "10bb39dd-d365-4aab-b5e4-2ebf8aef14a1",
+    "synced_at": 1778182239
+  },
+  "SKILL_FLOOR.md": {
+    "hash": "cb1f11cf4477a987",
+    "file_id": "cd92e386-254a-41a9-b116-dce7e03fa540",
+    "synced_at": 1778182240
+  },
+  "START-HERE.md": {
+    "hash": "91e14c8e5c4838b0",
+    "file_id": "8738badf-0ea6-4b38-8d4f-0c98c38ffb06",
+    "synced_at": 1778182240
+  },
+  "SUPPORT_POPUP.md": {
+    "hash": "4755d4acd6ecf976",
+    "file_id": "444fe3c3-9e39-46f1-b089-a4da091cb8e7",
+    "synced_at": 1778182241
+  },
+  "SYSTEM-REPRODUCIBLE.md": {
+    "hash": "dbdf7dc0ecc6f0a1",
+    "file_id": "873066c3-d771-44cd-9381-6d54fba04765",
+    "synced_at": 1778182242
+  },
+  "TINYLLM-MAINTENANCE-GUIDE.md": {
+    "hash": "916b5e824c56c616",
+    "file_id": "32790664-a697-494c-93b0-90c682f2736d",
+    "synced_at": 1778182243
+  },
+  "WIKI-EXTENSIONS-INTEGRATION.md": {
+    "hash": "241286655ad7bfe3",
+    "file_id": "559bf93b-140d-4245-af18-63ec25e7ac9b",
+    "synced_at": 1778182244
+  },
+  "WINDOWS_AGENT_TASKS.md": {
+    "hash": "8cc391952cbac1f7",
+    "file_id": "63941ab5-d820-435f-ad68-ff899f77f7ff",
+    "synced_at": 1778182245
+  },
+  "_meta/index.md": {
+    "hash": "a15cda8bfba5180a",
+    "file_id": "dc7ad543-0e39-4a60-a1df-26e61c420752",
+    "synced_at": 1778182246
+  },
+  "_meta/log.md": {
+    "hash": "933d692047aa6faf",
+    "file_id": "f32d3b9b-df79-435e-97da-4238b7ff96f6",
+    "synced_at": 1778182246
+  },
+  "_meta/recent.md": {
+    "hash": "af607916af9a0454",
+    "file_id": "49400cd6-5c57-440e-a3d2-99e9aab8332b",
+    "synced_at": 1778182247
+  },
+  "_meta/reports/README.md": {
+    "hash": "43509b10a292c2ef",
+    "file_id": "0079dd8c-f47b-471e-84ca-7294a567aeab",
+    "synced_at": 1778182247
+  },
+  "_meta/reports/ai-boot-check-20260506-135856.md": {
+    "hash": "5501a7bb919e0d18",
+    "file_id": "6ffda06e-b0de-449a-989f-f09911f9ba61",
+    "synced_at": 1778182248
+  },
+  "_meta/reports/ai-boot-check-20260506-174149.md": {
+    "hash": "59bfbd95b184b095",
+    "file_id": "284cb265-995d-4374-a0a3-ef6c4e73d3e4",
+    "synced_at": 1778182248
+  },
+  "_meta/reports/ai-boot-check-20260507-122454.md": {
+    "hash": "17e4c3ca6aa814ec",
+    "file_id": "25d2de9e-559c-4f16-ab96-3c4c8beaeebc",
+    "synced_at": 1778182249
+  },
+  "_meta/reports/ai-boot-check-20260507-123149.md": {
+    "hash": "9aea7d11b4a50100",
+    "file_id": "d73ad586-fbdb-40f0-8f20-b94a018378b1",
+    "synced_at": 1778182249
+  },
+  "_meta/reports/ai-boot-check-20260507-125414.md": {
+    "hash": "5d32f0b0852f2d9e",
+    "file_id": "dbf1a061-3d6d-4a91-bd93-9ef7886782c4",
+    "synced_at": 1778182250
+  },
+  "_meta/reports/ai-boot-check-20260507-143248.md": {
+    "hash": "02e6dc4697e178be",
+    "file_id": "24b4d8d6-b381-4ebb-a48c-1e57d5aaadef",
+    "synced_at": 1778182250
+  },
+  "_meta/reports/ai-boot-check-20260507-150528.md": {
+    "hash": "e944a82d1210a401",
+    "file_id": "bbcbc366-7d5e-4326-a70e-fff9e85ef656",
+    "synced_at": 1778182251
+  },
+  "_meta/reports/ai-boot-check-20260507-190846.md": {
+    "hash": "d5d4aef7470b8968",
+    "file_id": "5278c90a-1cb2-4fe1-b549-97861ab3d555",
+    "synced_at": 1778182251
+  },
+  "_meta/reports/ai-boot-check-20260507-192915.md": {
+    "hash": "a8e9127b060396f2",
+    "file_id": "3535ebd1-e640-49ff-ad3a-1d0522837d06",
+    "synced_at": 1778182252
+  },
+  "_meta/reports/ai-stack-diagnostic-20260506-135521.md": {
+    "hash": "177f19cff6096861",
+    "file_id": "9d745fb4-58b3-4ce7-a5c8-0719bd0be712",
+    "synced_at": 1778182252
+  },
+  "_meta/reports/health-check-20260507-052241.md": {
+    "hash": "506170f308d158b7",
+    "file_id": "fe6d0579-2257-4c99-ad94-14d17791f08c",
+    "synced_at": 1778182253
+  },
+  "_meta/reports/health-check-20260507-052311.md": {
+    "hash": "b675828c6d5a7ce8",
+    "file_id": "1e2b230b-6af2-46ab-ab44-018e238a4bbd",
+    "synced_at": 1778182253
+  },
+  "_meta/reports/health-check-20260507-052422.md": {
+    "hash": "122d829b2af2d69f",
+    "file_id": "4c053083-7c01-46e8-8c6b-bc5b4221889b",
+    "synced_at": 1778182254
+  },
+  "_meta/reports/health-check-20260507-052449.md": {
+    "hash": "a28adf8601cd405d",
+    "file_id": "7e2146b8-536f-4999-b187-bdfe84cb2979",
+    "synced_at": 1778182254
+  },
+  "_meta/reports/health-check-20260507-052613.md": {
+    "hash": "6f9209c86f825e08",
+    "file_id": "09072c39-5aa9-45a3-8ff7-32992ed8831a",
+    "synced_at": 1778182254
+  },
+  "_meta/reports/health-check-20260507-052628.md": {
+    "hash": "da1ff37cf4fc5c25",
+    "file_id": "9c976fa6-24b1-4d4c-acaa-9e676aaa7e41",
+    "synced_at": 1778182255
+  },
+  "_meta/reports/health-check-20260507-052835.md": {
+    "hash": "4c71aabcfbee856b",
+    "file_id": "b76e4421-c4b9-4c1f-bb67-590361d60e11",
+    "synced_at": 1778182255
+  },
+  "_meta/reports/health-check-20260507-122449.md": {
+    "hash": "2feb5a0f059651e6",
+    "file_id": "1b3ffeaf-0d83-44e5-bce3-ac904af2baf8",
+    "synced_at": 1778182256
+  },
+  "_meta/reports/health-check-20260507-144652.md": {
+    "hash": "de501b5b1729807f",
+    "file_id": "c15c3df6-1ce3-4d2a-a35e-611ee862523c",
+    "synced_at": 1778182256
+  },
+  "_meta/reports/health-check-20260507-145344.md": {
+    "hash": "c1740c20cb558709",
+    "file_id": "fcea4ada-4a6f-4067-9938-c80c3f9a228e",
+    "synced_at": 1778182257
+  },
+  "_meta/reports/lint-20260430-215603.md": {
+    "hash": "f838fa00a8558dae",
+    "file_id": "9c9f023e-3c89-47a6-95d6-dc4cccf453e3",
+    "synced_at": 1778182257
+  },
+  "_meta/reports/lint-20260430-215630.md": {
+    "hash": "99665899146ec355",
+    "file_id": "b025f5dc-9c63-4f79-9a4b-026d0ecee527",
+    "synced_at": 1778182258
+  },
+  "_meta/reports/wiki-linux-diagnostic-20260507-125241.md": {
+    "hash": "7a5ed7a2f5526252",
+    "file_id": "39f9cbea-b58a-48eb-b608-7376cc6e41ad",
+    "synced_at": 1778182258
+  },
+  "_meta/reports/wiki-linux-diagnostic-20260507-125409.md": {
+    "hash": "f92f1c7e80c314f0",
+    "file_id": "67bbeae8-f9ad-4c62-b0c2-1d6b3749ed55",
+    "synced_at": 1778182259
+  },
+  "_meta/reports/wiki-linux-diagnostic-20260507-125818.md": {
+    "hash": "4bed3b32c6dbd165",
+    "file_id": "97471176-0ee8-4825-ab7d-293d69af28d7",
+    "synced_at": 1778182260
+  },
+  "_meta/session/2026-05-05.md": {
+    "hash": "1803373b1c73ea04",
+    "file_id": "7193f7bf-c66a-4bbd-8c3c-f8d0ae1bf22c",
+    "synced_at": 1778182260
+  },
+  "_meta/session/20260506-182318-startup.md": {
+    "hash": "85ef4006b23c308a",
+    "file_id": "baec44a1-6edb-47de-a21b-90921b665498",
+    "synced_at": 1778182261
+  },
+  "_meta/session/20260506-222740-startup.md": {
+    "hash": "675a87f6376c13a5",
+    "file_id": "7e04f17d-0952-45f6-8330-b16d9fd97313",
+    "synced_at": 1778182261
+  },
+  "_meta/session/20260506-222830-startup.md": {
+    "hash": "2dc737ab0a9ae912",
+    "file_id": "78ce11a7-9e89-4428-9c17-ac7b8e3c8069",
+    "synced_at": 1778182262
+  },
+  "_meta/session/20260506-222902-startup.md": {
+    "hash": "a0e7a0473bb3ccef",
+    "file_id": "6cb7cbcd-31aa-400e-a981-f8847c210e4f",
+    "synced_at": 1778182262
+  },
+  "_meta/task-log/2026-04-30/213257-bootstrap.md": {
+    "hash": "7903164713f39920",
+    "file_id": "41903203-4765-4e9e-a647-87488f5bd693",
+    "synced_at": 1778182263
+  },
+  "_meta/task-log/2026-04-30/213257-status.md": {
+    "hash": "9893da254954bd0f",
+    "file_id": "b3e39275-21e4-45d5-a245-0cfc20c52d2a",
+    "synced_at": 1778182263
+  },
+  "_meta/task-log/2026-04-30/213502-status.md": {
+    "hash": "e25d3b3a67fc2943",
+    "file_id": "513f17c7-01d4-44f7-a1cf-e87615ee14ba",
+    "synced_at": 1778182264
+  },
+  "_meta/task-log/2026-04-30/213653-bootstrap.md": {
+    "hash": "b669a4ea2a1fcca1",
+    "file_id": "b18f595b-9cc3-4656-b390-491f2f5a5bab",
+    "synced_at": 1778182264
+  },
+  "_meta/task-log/2026-04-30/215532-bootstrap.md": {
+    "hash": "ac5c190601732992",
+    "file_id": "31fa9ddd-565c-4601-9dda-e322211d79e2",
+    "synced_at": 1778182265
+  },
+  "_meta/task-log/2026-04-30/215602-ingest.md": {
+    "hash": "7330fa61a85ccfd6",
+    "file_id": "a5cdcce7-9eea-455f-88c7-20af1e46eea0",
+    "synced_at": 1778182265
+  },
+  "_meta/task-log/2026-04-30/215603-lint.md": {
+    "hash": "3d04106fb796b765",
+    "file_id": "05992a85-e6f3-4605-93b2-d6f9d4f65d53",
+    "synced_at": 1778182266
+  },
+  "_meta/task-log/2026-04-30/215604-doctor.md": {
+    "hash": "e183246c36d44f6a",
+    "file_id": "50a78207-2523-4a2b-9d19-168af323ce9b",
+    "synced_at": 1778182266
+  },
+  "_meta/task-log/2026-04-30/215630-lint.md": {
+    "hash": "bfd0cf894af013e5",
+    "file_id": "50804215-bea1-48aa-9ed0-7392732329d6",
+    "synced_at": 1778182267
+  },
+  "_meta/task-log/2026-04-30/215631-doctor.md": {
+    "hash": "0328532ac2defc07",
+    "file_id": "a423896d-ab9c-48f5-ae11-abccbe6a5bfb",
+    "synced_at": 1778182267
+  },
+  "_meta/task-log/2026-04-30/215849-bootstrap.md": {
+    "hash": "7e5ee5b20ab02208",
+    "file_id": "e582d516-be4a-4240-86fc-9b2e61c65f2a",
+    "synced_at": 1778182268
+  },
+  "bin/history/CHAT_SUMMARY.md": {
+    "hash": "f607c051ddb303e4",
+    "file_id": "b286b2f1-1a12-43f5-8167-566a1dccf863",
+    "synced_at": 1778182268
+  },
+  "bin/history/CHAT_SUMMARY_v2.md": {
+    "hash": "dd60a618a5c75c34",
+    "file_id": "9c3af16e-a818-4e46-8310-5e4d453ea627",
+    "synced_at": 1778182269
+  },
+  "bin/history/CHAT_SUMMARY_v3.md": {
+    "hash": "ce721e060549ec9a",
+    "file_id": "2b4cd92a-b60d-462d-b357-c6628f12e44c",
+    "synced_at": 1778182270
+  },
+  "bin/history/EXECUTION_PLAN.md": {
+    "hash": "9f876b4ecab1a68b",
+    "file_id": "50b7922f-1e87-4bc5-a158-ab7e71945606",
+    "synced_at": 1778182271
+  },
+  "bin/history/EXECUTION_PLAN_v2.md": {
+    "hash": "b98ea9f93fb3fb99",
+    "file_id": "a51d6298-2f39-46be-9155-035cc4904cf0",
+    "synced_at": 1778182274
+  },
+  "bin/history/archwiki.md": {
+    "hash": "e21c2091b76581cb",
+    "file_id": "43ac5851-bf4c-4663-aca4-7d4fb6358393",
+    "synced_at": 1778182275
+  },
+  "bin/history/karpathy-llm-wiki.md": {
+    "hash": "b69a85f4983d16a0",
+    "file_id": "d101b306-2904-4eca-b407-5a2c1a64edaf",
+    "synced_at": 1778182276
+  },
+  "copilot/copilot-custom-prompts/Clip Web Page.md": {
+    "hash": "88f2680666cd8387",
+    "file_id": "27a6a52f-53fb-49fc-8989-120169dabf57",
+    "synced_at": 1778182276
+  },
+  "copilot/copilot-custom-prompts/Clip YouTube Transcript.md": {
+    "hash": "73ae7fd34976d3fa",
+    "file_id": "ba5709fb-bfce-40ad-988e-d7cc1ccccdb8",
+    "synced_at": 1778182277
+  },
+  "copilot/copilot-custom-prompts/Emojify.md": {
+    "hash": "aedae09ffd91ad65",
+    "file_id": "2355ec71-7dca-4397-9fc7-5127d64dbdb9",
+    "synced_at": 1778182277
+  },
+  "copilot/copilot-custom-prompts/Explain like I am 5.md": {
+    "hash": "12b6e53c3209d763",
+    "file_id": "9faa998c-1555-45e9-ba2c-645362e2cd6b",
+    "synced_at": 1778182278
+  },
+  "copilot/copilot-custom-prompts/Fix grammar and spelling.md": {
+    "hash": "0842f6ad25fd0898",
+    "file_id": "9164759e-2535-4026-87cb-3cdc765584ac",
+    "synced_at": 1778182278
+  },
+  "copilot/copilot-custom-prompts/Generate glossary.md": {
+    "hash": "2175ca5d8b287c86",
+    "file_id": "3fc5c431-7011-432c-8e94-9b1a130e281f",
+    "synced_at": 1778182278
+  },
+  "copilot/copilot-custom-prompts/Generate table of contents.md": {
+    "hash": "349d61dc0aca2cdf",
+    "file_id": "97728602-59e9-49d6-adbe-c07c8a35e04c",
+    "synced_at": 1778182279
+  },
+  "copilot/copilot-custom-prompts/Make longer.md": {
+    "hash": "a450a479c32a8eb9",
+    "file_id": "4d43cca7-742a-499b-9f1b-c55eb8209be9",
+    "synced_at": 1778182279
+  },
+  "copilot/copilot-custom-prompts/Make shorter.md": {
+    "hash": "f933d946ef99ad88",
+    "file_id": "35971eff-f332-49cb-b9ca-3912b950fa82",
+    "synced_at": 1778182280
+  },
+  "copilot/copilot-custom-prompts/Remove URLs.md": {
+    "hash": "a0f4c4c4c6bbe2d7",
+    "file_id": "e1fae3a9-aac4-4c49-9c4e-2eec0b714a6b",
+    "synced_at": 1778182280
+  },
+  "copilot/copilot-custom-prompts/Rewrite as tweet thread.md": {
+    "hash": "2c6dbb0edc08f003",
+    "file_id": "34cad7bb-09d4-4df5-84ed-acdda5dcfa87",
+    "synced_at": 1778182281
+  },
+  "copilot/copilot-custom-prompts/Rewrite as tweet.md": {
+    "hash": "7b6544aa9cb80986",
+    "file_id": "f4abab48-7cea-4ab8-a27a-b3dd26880f40",
+    "synced_at": 1778182281
+  },
+  "copilot/copilot-custom-prompts/Simplify.md": {
+    "hash": "dd330efff8b95e69",
+    "file_id": "6b0cedb8-1a80-45f0-9c73-b563ee6a72de",
+    "synced_at": 1778182282
+  },
+  "copilot/copilot-custom-prompts/Summarize.md": {
+    "hash": "5bbbb517d08098c0",
+    "file_id": "7c343f4f-d87e-4522-ba33-27e4e5509461",
+    "synced_at": 1778182282
+  },
+  "copilot/copilot-custom-prompts/Translate to Chinese.md": {
+    "hash": "66747e9eae733241",
+    "file_id": "462de2d2-5d5e-47e2-bfaa-aea2bd41f692",
+    "synced_at": 1778182283
+  },
+  "extensions/ollama-local-assistant/README.md": {
+    "hash": "103a9a62dc755d58",
+    "file_id": "4df87749-ae92-499d-97a1-49960d566ed9",
+    "synced_at": 1778182283
+  },
+  "extensions/wiki-linux-firefox/README.md": {
+    "hash": "6939f31df67ad75a",
+    "file_id": "03fa6487-3203-4a2a-8135-45475779edfe",
+    "synced_at": 1778182284
+  },
+  "free_windows_debloat_guide.md": {
+    "hash": "1ffa6c00876b050b",
+    "file_id": "c70465d1-425d-450a-8af9-499f925f26de",
+    "synced_at": 1778182285
+  },
+  "raw/README.md": {
+    "hash": "ee7e7ca6ead5c49d",
+    "file_id": "67c8ce88-e33b-4d3e-a561-fc70e8015a40",
+    "synced_at": 1778182285
+  },
+  "references/archwiki.md": {
+    "hash": "e21c2091b76581cb",
+    "file_id": "89563fe1-996b-4033-808d-2c9dda293fb3",
+    "synced_at": 1778182286
+  },
+  "references/karpathy-llm-wiki.md": {
+    "hash": "b69a85f4983d16a0",
+    "file_id": "de30d489-dbb4-45c5-9a22-efb0030cdfc7",
+    "synced_at": 1778182286
+  },
+  "sources/README.md": {
+    "hash": "bbb02ddac67ba4be",
+    "file_id": "d23b36a5-ca7b-4b87-89dc-a4e445327904",
+    "synced_at": 1778182287
+  },
+  "system/README.md": {
+    "hash": "c3321b8f8e6694ee",
+    "file_id": "51e175e1-eb3b-47de-ba13-3571ec90e991",
+    "synced_at": 1778182287
+  },
+  "system/WALLPAPER-SCREENSAVER.md": {
+    "hash": "48a42b7f9ea7d8f8",
+    "file_id": "da6fa165-af9b-4a8a-adf1-06c9bc77f104",
+    "synced_at": 1778182288
+  },
+  "system/brightness-control.md": {
+    "hash": "5bcb4f96236413a8",
+    "file_id": "22211f92-a11d-4416-8767-731a69058f3b",
+    "synced_at": 1778182289
+  },
+  "system/config/fstab.md": {
+    "hash": "4020c095558944d6",
+    "file_id": "a26c8310-4558-4f5c-9862-df7d407f59ed",
+    "synced_at": 1778182290
+  },
+  "system/config/hostname.md": {
+    "hash": "6103140197954e14",
+    "file_id": "2de656f3-865e-495a-a307-30d58f5d7a22",
+    "synced_at": 1778182290
+  },
+  "system/config/hosts.md": {
+    "hash": "ece0244fb8ad4f93",
+    "file_id": "732257aa-a271-4013-b52d-32f83cf526f4",
+    "synced_at": 1778182291
+  },
+  "system/config/locale.conf.md": {
+    "hash": "74305cc32581a863",
+    "file_id": "c67f30fe-6cf4-480b-92bc-4fa94dd51283",
+    "synced_at": 1778182291
+  },
+  "system/config/makepkg.conf.md": {
+    "hash": "7dd6f815428a75eb",
+    "file_id": "ba154b25-0fd2-4007-9d28-a503eff6c610",
+    "synced_at": 1778182292
+  },
+  "system/config/mkinitcpio.conf.md": {
+    "hash": "f1b77b20674778b0",
+    "file_id": "6b36cff9-fd12-40b2-ae8a-0516d461ebc2",
+    "synced_at": 1778182293
+  },
+  "system/config/pacman.conf.md": {
+    "hash": "96cf6f20b27d618b",
+    "file_id": "a196dc96-30d1-4de6-8b2f-8fbc522fc9f5",
+    "synced_at": 1778182293
+  },
+  "system/config/ssh/sshd_config.md": {
+    "hash": "820e371270bcee86",
+    "file_id": "7ffe7878-7e3e-42f9-8787-2d69b58135d4",
+    "synced_at": 1778182294
+  },
+  "system/config/vconsole.conf.md": {
+    "hash": "8ef5f5ceb07a8fc5",
+    "file_id": "eab90f5e-1f50-4f82-a1de-4b4bb295310b",
+    "synced_at": 1778182294
+  },
+  "system/overview.md": {
+    "hash": "8be20bfa026d4171",
+    "file_id": "fb6317e0-1b39-4b05-b70e-e2d6ce754921",
+    "synced_at": 1778182295
+  },
+  "templates/new_page.md": {
+    "hash": "218aed63793ad706",
+    "file_id": "a50ae351-4a5d-4367-b004-53c3f439f930",
+    "synced_at": 1778182295
+  },
+  "templates/source_summary.md": {
+    "hash": "4a204ea2e3b54c03",
+    "file_id": "de062af3-cc65-424f-99cf-521c6d1c0fe7",
+    "synced_at": 1778182296
+  },
+  "templates/system_config.md": {
+    "hash": "a6233848d402f474",
+    "file_id": "aeacb1b1-8ed5-4da3-830c-4cb3b0a9acf8",
+    "synced_at": 1778182296
+  },
+  "user/README.md": {
+    "hash": "28c7fd1923bd2999",
+    "file_id": "7c89dd6d-03ac-46bd-9181-a90b32ad0278",
+    "synced_at": 1778182297
+  },
+  "user/copilot/copilot-custom-prompts/Generate table of contents.md": {
+    "hash": "2b5c896da7780069",
+    "file_id": "f126e9f6-dbaa-4290-93fd-eaf12937926f",
+    "synced_at": 1778182297
+  },
+  "user/development/tools/copilot/copilot-custom-prompts/Summarize.md": {
+    "hash": "0813fb8a8f9c2b98",
+    "file_id": "963bc9c2-c164-44ae-af2c-497dce77065c",
+    "synced_at": 1778182298
+  },
+  "user/development/tools/wordpress-control/.github/instructions/llm-surgical-execution.instructions.md": {
+    "hash": "cadb4ee9fb51f559",
+    "file_id": "1284cef9-3221-4532-be69-7ee2a5338c60",
+    "synced_at": 1778182298
+  },
+  "user/development/tools/wordpress-control/README.md": {
+    "hash": "0e240720f78d1c8b",
+    "file_id": "55456ee0-7d67-4c9c-b832-606439ffaa6c",
+    "synced_at": 1778182299
+  },
+  "user/development/tools/wordpress-control/automation/README.md": {
+    "hash": "c5f593b6ef9cea32",
+    "file_id": "c6b4508e-df88-4d2d-be54-2dce5011c22c",
+    "synced_at": 1778182300
+  },
+  "user/development/tools/wordpress-control/docs/LLM_PROCESS_AND_AUTOMATION_PLAYBOOK.md": {
+    "hash": "7056d61de78bdde1",
+    "file_id": "90d65b71-5242-4704-a952-610414b000fc",
+    "synced_at": 1778182300
+  },
+  "user/development/tools/wordpress-control/docs/POSTFLOW_AUTOMATION_CHECKLIST.md": {
+    "hash": "5d2c42cf5accfeb7",
+    "file_id": "7c2688c8-979a-4d21-8bcb-0155d1303fc9",
+    "synced_at": 1778182301
+  },
+  "user/development/tools/wordpress-control/docs/USER_GUIDE_CREDENTIALS_AND_LOGINS.md": {
+    "hash": "b1db86ed3af635a5",
+    "file_id": "732bf909-b7de-4893-803e-2d110b981880",
+    "synced_at": 1778182301
+  },
+  "user/notes/README.md": {
+    "hash": "5d25c950f91c3be4",
+    "file_id": "f2587915-9e95-4afd-a2e6-5af37b990aef",
+    "synced_at": 1778182302
+  },
+  "user/notes/SETUP-COMPLETE-SUMMARY.md": {
+    "hash": "5efd94b9429bab5e",
+    "file_id": "6e91464a-93dd-48c3-bacd-5048b054d443",
+    "synced_at": 1778182303
+  },
+  "user/notes/WIKI-LINUX-AUTOMATION-AUDIT.md": {
+    "hash": "c05a47b763adb1c7",
+    "file_id": "fc6a0fef-e13e-4eb8-b5a9-888532eb15a6",
+    "synced_at": 1778182304
+  },
+  "user/notes/WIKI-LINUX-COMPLETE-SUMMARY.md": {
+    "hash": "9abad8b391d5accc",
+    "file_id": "9627a599-ee27-44a6-a67b-bc9e93da5c51",
+    "synced_at": 1778182305
+  },
+  "user/notes/WIKI-LINUX-FIXES-AND-WEB-UI.md": {
+    "hash": "b4689b1faca38947",
+    "file_id": "64c83083-a799-4083-a2da-1c2a67910bbc",
+    "synced_at": 1778182306
+  },
+  "user/notes/WIKI-LINUX-SETUP-AND-WORKFLOW-GUIDE.md": {
+    "hash": "f87da3ff9e73eea9",
+    "file_id": "8ae245cc-56ec-4771-9ae6-4f836fc1499a",
+    "synced_at": 1778182307
+  },
+  "user/notes/brightness-troubleshooting.md": {
+    "hash": "ffd160899a03ec2c",
+    "file_id": "a9a527c7-3b44-4075-9bec-163a02b3ec93",
+    "synced_at": 1778182308
+  },
+  "user/notes/my-day.md": {
+    "hash": "da07da7e10c48491",
+    "file_id": "5bd6e532-0828-44a3-97b6-1190d2c96a45",
+    "synced_at": 1778182309
+  },
+  "user/notes.md": {
+    "hash": "2c05fb45a4542692",
+    "file_id": "e0b7b013-c64a-4a4f-9d30-b3a8d5f4f8bb",
+    "synced_at": 1778182309
+  },
+  "user/projects/README.md": {
+    "hash": "569395cadd5e4164",
+    "file_id": "2d37a1c5-a2c2-4b57-a3c0-f0e71e88e48b",
+    "synced_at": 1778182310
+  },
+  "user/projects/wiki-linux.md": {
+    "hash": "1eebd9f94ead7e40",
+    "file_id": "f1ec295f-dee5-42c2-a296-6c1ce1ef3bae",
+    "synced_at": 1778182310
+  },
+  "user/projects.md": {
+    "hash": "8d647a5a5a1be4b0",
+    "file_id": "4d97c05a-03c9-41cb-b0b2-16ce05206d51",
+    "synced_at": 1778182311
+  },
+  "user/research/README.md": {
+    "hash": "b5ac40ef879c67b5",
+    "file_id": "ee26561c-b1ea-4b17-8fb8-1c4b555efa0a",
+    "synced_at": 1778182311
+  },
+  "user/research.md": {
+    "hash": "61d1334a3f4cfd02",
+    "file_id": "f4832aaa-932b-4814-b8d1-5803bebcb2fc",
+    "synced_at": 1778182312
+  },
+  "wiki_ingestor/README.md": {
+    "hash": "528acc568ba4a46d",
+    "file_id": "7adaf3d7-ec9e-4311-abaf-a43e614d8ce6",
+    "synced_at": 1778182313
+  }
+}

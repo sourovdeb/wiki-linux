@@ -1,0 +1,10 @@
+[Unit]
+Description=Wiki Knowledge Base Sync Timer
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=1h
+Unit=wiki-kb-sync.service
+
+[Install]
+WantedBy=timers.target

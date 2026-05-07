@@ -1,1 +1,0 @@
-/home/sourov/Documents/wiki-linux/wiki-linux/EXPECTATIONS.md

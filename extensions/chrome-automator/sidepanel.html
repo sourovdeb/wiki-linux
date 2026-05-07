@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wiki Automator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; font-size: 13px; }
+
+    header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; background: #1e293b; border-bottom: 1px solid #334155;
+    }
+    header h1 { font-size: 14px; font-weight: 600; flex: 1; }
+    #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+    #status-dot.online { background: #22c55e; }
+
+    #log {
+      padding: 10px 14px; height: calc(100vh - 42px - 40px);
+      overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+    }
+    .entry { padding: 4px 8px; border-radius: 4px; background: #1e293b; font-size: 12px; }
+    .entry.info  { border-left: 3px solid #3b82f6; }
+    .entry.ok    { border-left: 3px solid #22c55e; }
+    .entry.error { border-left: 3px solid #ef4444; }
+    .entry time  { color: #64748b; margin-right: 6px; }
+
+    footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 6px 14px; background: #1e293b; border-top: 1px solid #334155;
+      display: flex; gap: 6px;
+    }
+    button {
+      flex: 1; padding: 5px; border: none; border-radius: 4px; cursor: pointer;
+      background: #0284c7; color: #fff; font-size: 12px; font-weight: 500;
+    }
+    button:hover { background: #0369a1; }
+    button.secondary { background: #334155; }
+    button.secondary:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <header>
+    <span id="status-dot"></span>
+    <h1>Wiki Automator</h1>
+    <a href="http://127.0.0.1:8080" target="_blank" style="color:#94a3b8;font-size:11px;text-decoration:none;">OpenWebUI ↗</a>
+  </header>
+
+  <div id="log"></div>
+
+  <footer>
+    <button id="btn-open-popup" class="secondary">Open Panel</button>
+    <button id="btn-clear">Clear Log</button>
+  </footer>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

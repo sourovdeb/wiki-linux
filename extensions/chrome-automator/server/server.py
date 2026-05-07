@@ -22,7 +22,8 @@ from pydantic import BaseModel
 
 from email_batch import run_email_batch
 from social_post import run_social_post
-from activity_learner import analyse_recordings, save_session_cookies, save_recording
+from activity_learner import analyse_recordings, save_recording
+from session_store import save_session_cookies
 from llm_helper import rewrite_with_ollama
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

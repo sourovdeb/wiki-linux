@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=📚 Wiki Guide
+Comment=Wiki-Linux desktop widget with quick actions and status
+Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-desktop-widget
+Icon=help-about
+Terminal=false
+Categories=Utility;Documentation;
+Keywords=wiki;guide;help;status;

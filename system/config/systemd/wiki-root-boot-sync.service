@@ -1,0 +1,11 @@
+[Unit]
+Description=Wiki-Linux root boot synchronization
+After=local-fs.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wiki-root-boot-sync
+
+[Install]
+WantedBy=multi-user.target

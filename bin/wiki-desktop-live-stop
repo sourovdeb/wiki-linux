@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Stop the live desktop widget
+set -euo pipefail
+
+pid_file="/tmp/wiki-desktop-live.pid"
+
+if [ -f "$pid_file" ]; then
+    pid=$(cat "$pid_file")
+    if kill "$pid" 2>/dev/null; then
+        echo "✓ Stopped desktop widget (PID: $pid)"
+    else
+        echo "⚠ Widget not running (stale PID file removed)"
+    fi
+    rm -f "$pid_file"
+else
+    echo "⚠ No widget PID file found"
+fi
+
+# Also kill by process name as fallback
+if pkill -f "Wiki-Linux Guide" 2>/dev/null; then
+    echo "✓ Killed remaining widget processes"
+fi
+
+pkill -f "wiki-desktop-live-loop" 2>/dev/null || true
+pkill -f "wiki-desktop-live" 2>/dev/null || true
+
+echo "Desktop widget stopped"

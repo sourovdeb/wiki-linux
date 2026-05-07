@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+repo_root_default="$(cd "$script_dir/.." && pwd)"
+repo_root="${WIKI_REPO_ROOT:-$repo_root_default}"
+wiki_root="${WIKI_ROOT:-$HOME/wiki}"
+report_dir="$repo_root/_meta/reports"
+mkdir -p "$report_dir"
+ts="$(date -u +%Y%m%d-%H%M%S)"
+report="$report_dir/health-check-$ts.md"
+
+svc_status() {
+  local unit="$1"
+  systemctl --user is-active "$unit" 2>/dev/null || echo inactive
+}
+
+http_status() {
+  local url="$1"
+  if curl -fsS --max-time 2 "$url" >/dev/null 2>&1; then
+    echo up
+  else
+    echo down
+  fi
+}
+
+pages="0"
+if [[ -d "$wiki_root" ]]; then
+  pages="$(find "$wiki_root" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
+fi
+
+disk_free="$(df -h / | tail -1 | awk '{print $4}')"
+if [[ -d "$wiki_root/.git" ]]; then
+  pending_changes="$(git -C "$wiki_root" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+else
+  pending_changes="n/a"
+fi
+
+{
+  echo "# Wiki Health Check"
+  echo
+  echo "- generated_utc: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  echo "- wiki_root: $wiki_root"
+  echo "- pages: $pages"
+  echo "- pending_git_changes: $pending_changes"
+  echo "- free_disk_root: $disk_free"
+  echo "- wiki_monitor: $(svc_status wiki-monitor)"
+  echo "- wallpaper_timer: $(svc_status wiki-wallpaper.timer)"
+  echo "- sync_timer: $(svc_status wiki-sync.timer)"
+  echo "- screensaver_watch: $(svc_status wiki-screensaver-watch.service)"
+  echo "- ollama_api: $(http_status http://127.0.0.1:11434/api/tags)"
+  echo "- webui_http: $(http_status http://127.0.0.1:8080)"
+} > "$report"
+
+echo "Health check report: $report"
+cat "$report"

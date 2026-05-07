@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+wiki_root="${WIKI_ROOT:-$HOME/wiki}"
+if [[ ! -d "$wiki_root/.git" ]]; then
+  echo "Wiki root is not a git repository: $wiki_root"
+  exit 1
+fi
+
+branch="$(git -C "$wiki_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+
+if [[ -z "$(git -C "$wiki_root" config --get user.name 2>/dev/null || true)" ]]; then
+  git -C "$wiki_root" config user.name "wiki-auto-sync" || true
+fi
+if [[ -z "$(git -C "$wiki_root" config --get user.email 2>/dev/null || true)" ]]; then
+  git -C "$wiki_root" config user.email "wiki-auto-sync@localhost" || true
+fi
+
+git -C "$wiki_root" add -A
+if [[ -n "$(git -C "$wiki_root" status --porcelain)" ]]; then
+  git -C "$wiki_root" commit -m "auto-sync: $(date '+%Y-%m-%d %H:%M:%S')" >/dev/null || true
+fi
+
+if git -C "$wiki_root" remote get-url origin >/dev/null 2>&1; then
+  GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" git -C "$wiki_root" pull --rebase origin "$branch" >/dev/null 2>&1 || true
+  GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" git -C "$wiki_root" push origin "$branch" >/dev/null 2>&1 || true
+fi
+
+echo "Auto-sync complete for $wiki_root"

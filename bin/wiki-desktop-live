@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Live desktop widget - beautiful persistent overlay
+set -euo pipefail
+
+repo_root="${WIKI_ROOT:-$HOME/wiki}"
+pid_file="/tmp/wiki-desktop-live.pid"
+
+# Kill existing widget
+if [ -f "$pid_file" ]; then
+    old_pid=$(cat "$pid_file")
+    kill "$old_pid" 2>/dev/null || true
+    pkill -P "$old_pid" 2>/dev/null || true
+    rm -f "$pid_file"
+fi
+
+# Get script directory
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Launch terminal widget
+if command -v xfce4-terminal >/dev/null 2>&1; then
+    xfce4-terminal \
+        --title="Wiki-Linux Guide" \
+        --hide-menubar \
+        --hide-scrollbar \
+        --hide-toolbar \
+        --geometry=40x25+10+60 \
+        --font="Monospace Bold 10" \
+        -e "$script_dir/wiki-desktop-live-loop" &
+else
+    xterm \
+        -T "Wiki-Linux Guide" \
+        -geometry 40x25+10+60 \
+        -fa "Monospace" \
+        -fs 10 \
+        -e "$script_dir/wiki-desktop-live-loop" &
+fi
+
+widget_pid=$!
+echo "$widget_pid" > "$pid_file"
+
+# Configure window appearance (after brief delay for window to appear)
+sleep 1.5
+
+# Make window sticky, skip taskbar, and set to desktop layer
+if command -v wmctrl >/dev/null 2>&1; then
+    wmctrl -r "Wiki-Linux Guide" -b add,sticky,skip_taskbar,skip_pager,below 2>/dev/null || true
+    # Position on desktop (below all windows)
+    wmctrl -r "Wiki-Linux Guide" -b add,below 2>/dev/null || true
+fi
+
+# Make semi-transparent if compositor is running
+if command -v xprop >/dev/null 2>&1 && { pgrep -x compton >/dev/null 2>&1 || pgrep -x picom >/dev/null 2>&1; }; then
+    WID=$(wmctrl -l 2>/dev/null | grep "Wiki-Linux Guide" | awk '{print $1}' | head -n1)
+    if [ -n "$WID" ]; then
+        xprop -id "$WID" -f _NET_WM_WINDOW_OPACITY 32c -set _NET_WM_WINDOW_OPACITY 0xE6000000 2>/dev/null || true
+    fi
+fi
+
+echo "✓ Desktop widget started (PID: $widget_pid)"
+echo "  Position: Top-left corner"
+echo "  Updates: Every 30 seconds"
+echo ""
+echo "To stop: wiki-desktop-live-stop"
+echo "Or: pkill -f 'Wiki-Linux Guide'"

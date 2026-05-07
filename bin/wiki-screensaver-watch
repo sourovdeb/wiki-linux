@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+state_file="/tmp/wiki-screensaver-watch.state"
+
+launch_panel() {
+  if pgrep -f "Wiki-Linux Screensaver" >/dev/null 2>&1; then
+    return 0
+  fi
+  if command -v xfce4-terminal >/dev/null 2>&1; then
+    xfce4-terminal --title "Wiki-Linux Screensaver" --fullscreen -e "$script_dir/wiki-screensaver-interactive --oneshot" >/dev/null 2>&1 &
+  else
+    xterm -T "Wiki-Linux Screensaver" -fullscreen -e "$script_dir/wiki-screensaver-interactive --oneshot" >/dev/null 2>&1 &
+  fi
+}
+
+last_state="inactive"
+if [[ -f "$state_file" ]]; then
+  last_state="$(cat "$state_file" 2>/dev/null || echo inactive)"
+fi
+
+while true; do
+  query_out="$(xfce4-screensaver-command -q 2>/dev/null || true)"
+  if echo "$query_out" | grep -qi " is active"; then
+    current_state="active"
+  else
+    current_state="inactive"
+  fi
+
+  # Show interactive panel once right after unlock.
+  if [[ "$last_state" == "active" && "$current_state" == "inactive" ]]; then
+    launch_panel
+  fi
+
+  echo "$current_state" > "$state_file"
+  last_state="$current_state"
+  sleep 5
+done

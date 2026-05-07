@@ -19,6 +19,23 @@ Instead of static wallpaper, this system displays **live wiki statistics** that 
 
 The wallpaper is generated dynamically using Python + ImageMagick, ensuring it always shows current metrics.
 
+## Quick Apply (Script-First)
+
+Run the full automation stack once:
+
+```bash
+/home/sourov/Documents/wiki-linux/wiki-linux/WIKI-TOOLS/handoff/13-wallpaper-screensaver-boot-stack.sh
+```
+
+This configures and enables:
+
+- User timer: `wiki-wallpaper.timer`
+- User timer: `wiki-sync.timer`
+- User service: `wiki-screensaver-watch.service`
+- User boot check: `wiki-boot-health.service`
+- Root boot sync: `wiki-root-boot-sync.service`
+- Root pre-shutdown health: `wiki-pre-shutdown-health.service`
+
 ---
 
 ## Components

@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""
+Wiki-Linux Desktop Widget - A helpful guide widget for the desktop
+"""
+import subprocess
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+
+def get_status():
+    """Get system status information"""
+    repo_root = os.environ.get('WIKI_ROOT', str(Path.home() / 'wiki'))
+    
+    # Count pages
+    try:
+        pages = len(list(Path(repo_root).rglob('*.md')))
+    except:
+        pages = "?"
+    
+    # Check services
+    def check_service(cmd):
+        try:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=2)
+            return result.stdout.strip()
+        except:
+            return "unknown"
+    
+    daemon = check_service("systemctl --user is-active wiki-monitor 2>/dev/null || echo down")
+    ollama = "✓" if check_service("curl -fsS --max-time 1 http://127.0.0.1:11434 >/dev/null 2>&1 && echo yes") else "✗"
+    webui = "✓" if check_service("curl -fsS --max-time 1 http://127.0.0.1:8080 >/dev/null 2>&1 && echo yes") else "✗"
+    
+    return {
+        'pages': pages,
+        'daemon': daemon,
+        'ollama': ollama,
+        'webui': webui
+    }
+
+def show_widget():
+    """Display the desktop widget using zenity"""
+    status = get_status()
+    
+    # Build widget content with emojis and formatting
+    content = f"""<span size='large' weight='bold'>📚 Wiki-Linux Guide</span>
+
+<span size='medium' weight='bold'>System Status</span>
+📄 Pages: {status['pages']}
+🔄 Monitor: <span color='{"green" if status["daemon"] == "active" else "orange"}'>{status['daemon']}</span>
+🤖 Ollama: {status['ollama']}
+🌐 WebUI: {status['webui']}
+
+<span size='medium' weight='bold'>Quick Actions</span>
+• <b>Super+Space</b> - Search wiki
+• <b>wiki new "title"</b> - Create note
+• <b>wiki-status-panel</b> - Full status
+
+<span size='medium' weight='bold'>Web Interfaces</span>
+• Ollama: http://127.0.0.1:11434
+• Open WebUI: http://127.0.0.1:8080
+
+<span size='medium' weight='bold'>Getting Started</span>
+1. Drop files → ~/Downloads (auto-indexed)
+2. Search → <b>Super+Space</b>
+3. Ask AI → Open WebUI
+4. Browse → Open Obsidian vault
+
+<i>Last updated: {datetime.now().strftime("%H:%M:%S")}</i>"""
+    
+    # Create a more interactive widget with buttons
+    actions = [
+        ("🔍 Search", "wiki-search-dialog"),
+        ("📝 New Note", "wiki-new-note"),
+        ("📊 Status", "wiki-status-panel"),
+        ("🌐 WebUI", "xdg-open http://127.0.0.1:8080"),
+        ("📁 Open Vault", "xdg-open ~/wiki"),
+        ("🔄 Restart Monitor", "systemctl --user restart wiki-monitor")
+    ]
+    
+    # Display with zenity (use notification for non-intrusive widget)
+    try:
+        # Try yad first (better for desktop widgets)
+        if subprocess.run(['which', 'yad'], capture_output=True).returncode == 0:
+            show_yad_widget(content, status)
+        else:
+            show_zenity_widget(content, actions)
+    except Exception as e:
+        print(f"Error showing widget: {e}", file=sys.stderr)
+
+def show_yad_widget(content, status):
+    """Show widget using yad (advanced dialog)"""
+    cmd = [
+        'yad', '--text-info',
+        '--title=Wiki-Linux Guide',
+        '--width=400', '--height=500',
+        '--no-buttons',
+        '--margins=20',
+        '--text=' + content.replace('<', '&lt;').replace('>', '&gt;'),
+        '--timeout=30',
+        '--timeout-indicator=bottom'
+    ]
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def show_zenity_widget(content, actions):
+    """Show widget using zenity"""
+    # Show main info window with action buttons
+    action_text = "\n\n<b>Quick Actions:</b>\n" + "\n".join([f"• {title}" for title, _ in actions])
+    full_content = content + action_text
+    
+    cmd = [
+        'zenity', '--info',
+        '--title=📚 Wiki-Linux Desktop Guide',
+        '--width=500', '--height=600',
+        '--text=' + full_content,
+        '--ok-label=Choose Action',
+        '--extra-button=Refresh',
+        '--extra-button=Close'
+    ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    
+    if result.returncode == 0:
+        # OK button - show action menu
+        show_action_menu(actions)
+    elif 'Refresh' in result.stdout:
+        # Refresh button clicked
+        show_widget()
+    # else: Close button or window closed
+
+def show_action_menu(actions):
+    """Show action selection menu"""
+    menu_items = []
+    for title, cmd in actions:
+        menu_items.extend([title, cmd.split()[0]])
+    
+    cmd = [
+        'zenity', '--list',
+        '--title=Quick Actions',
+        '--text=Choose an action:',
+        '--column=Action', '--column=Command',
+        '--width=400', '--height=350',
+        '--hide-column=2',
+        '--print-column=2'
+    ] + menu_items
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            selected = result.stdout.strip()
+            # Find full command
+            for title, full_cmd in actions:
+                if full_cmd.startswith(selected):
+                    subprocess.Popen(full_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    break
+    except:
+        pass
+
+def main():
+    """Main entry point"""
+    if len(sys.argv) > 1 and sys.argv[1] == '--daemon':
+        # Run as persistent widget (refresh every 5 minutes)
+        import time
+        while True:
+            show_widget()
+            time.sleep(300)  # 5 minutes
+    else:
+        # Show once
+        show_widget()
+
+if __name__ == '__main__':
+    main()

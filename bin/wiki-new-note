@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Quick note creation helper
+set -euo pipefail
+
+repo_root="${WIKI_ROOT:-$HOME/wiki}"
+notes_dir="$repo_root/user/notes"
+
+if [ $# -eq 0 ]; then
+    # Interactive mode
+    title=$(zenity --entry --title="New Wiki Note" --text="Enter note title:" --width=400 2>/dev/null) || exit 0
+else
+    title="$*"
+fi
+
+[ -z "$title" ] && exit 0
+
+# Create slug
+slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9-')
+filepath="$notes_dir/$slug.md"
+
+mkdir -p "$notes_dir"
+
+# Create note with front matter
+cat > "$filepath" <<EOF
+---
+title: $title
+created: $(date -Iseconds)
+updated: $(date -Iseconds)
+tags: []
+---
+
+# $title
+
+EOF
+
+# Open in editor
+if command -v obsidian >/dev/null 2>&1; then
+    obsidian "obsidian://open?path=$filepath" &
+elif [ -n "${VISUAL:-}" ]; then
+    $VISUAL "$filepath" &
+elif [ -n "${EDITOR:-}" ]; then
+    $EDITOR "$filepath" &
+else
+    xdg-open "$filepath" &
+fi
+
+echo "Created: $filepath"

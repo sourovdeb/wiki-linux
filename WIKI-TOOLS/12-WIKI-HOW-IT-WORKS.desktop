@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Wiki: What It Is + How To Use
+Comment=Open Start Here, Guide, and README for this Arch wiki
+Exec=bash /home/sourov/Documents/wiki-linux/wiki-linux/WIKI-TOOLS/handoff/12-open-wiki-intro.sh
+Icon=help-browser
+Type=Application
+Terminal=false
+Categories=Utility;Education;

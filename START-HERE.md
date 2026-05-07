@@ -11,6 +11,24 @@ cssclasses: [wiki-space, wiki-start]
 
 This page is the easiest entry point for a new user.
 
+## Quick Help Widget
+
+**Need guidance?** Launch the desktop widget:
+- Click **📚 Wiki Guide** icon in WIKI-TOOLS folder
+- Or run: `wiki-desktop-widget`
+- Shows system status, quick actions, and keyboard shortcuts
+
+## Live Desktop + Screensaver
+
+Your desktop now supports a live wiki wallpaper and interactive screensaver panel.
+
+- Apply all automation: `WIKI-TOOLS/handoff/13-wallpaper-screensaver-boot-stack.sh`
+- Manual wallpaper refresh: `wiki-wallpaper-set`
+- Interactive screensaver panel: `wiki-screensaver-interactive`
+- Live guide overlay: `wiki-desktop-live`
+- Stop overlay: `wiki-desktop-live-stop`
+- Save+shutdown workflow: `wiki-safe-shutdown`
+
 ## First Three Places To Click
 
 - [[system/overview|Machine overview]] to understand what this computer is tracking.

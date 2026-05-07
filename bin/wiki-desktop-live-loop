@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Live widget display loop
+set -euo pipefail
+
+repo_root="${WIKI_ROOT:-$HOME/wiki}"
+if [[ ! -d "$repo_root" ]]; then
+    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+
+tput civis 2>/dev/null || true  # Hide cursor
+
+while true; do
+    clear || true
+    
+    # Collect status
+    page_count=$(find "$repo_root" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+    daemon_status=$(systemctl --user is-active wiki-monitor 2>/dev/null || true)
+    daemon_status=$(printf '%s' "$daemon_status" | tr -d '\n' | awk '{print $1}')
+    [ -z "$daemon_status" ] && daemon_status="down"
+    
+    ollama="✗ DOWN"
+    curl -fsS --max-time 1 http://127.0.0.1:11434 >/dev/null 2>&1 && ollama="✓ UP"
+    
+    webui="✗ DOWN"
+    curl -fsS --max-time 1 http://127.0.0.1:8080 >/dev/null 2>&1 && webui="✓ UP"
+    
+    git_info=$(git -C "$repo_root" log -1 --pretty='%ar' 2>/dev/null || echo "unknown")
+    
+    # Display widget
+    cat <<EOF
+╔════════════════════════════════════╗
+║    📚 WIKI-LINUX GUIDE           ║
+╠════════════════════════════════════╣
+║                                    ║
+║  SYSTEM STATUS                   ║
+║  ────────────────────────────    ║
+║  📄 Pages: $page_count                   ║
+║  🔄 Monitor: $daemon_status             ║
+║  🤖 Ollama: $ollama               ║
+║  🌐 WebUI: $webui                ║
+║  📝 Updated: $git_info       ║
+║                                    ║
+║  QUICK SHORTCUTS                 ║
+║  ────────────────────────────    ║
+║  Super+Space → Search            ║
+║  Super+F1 → Help Widget          ║
+║                                    ║
+║  WEB INTERFACES                  ║
+║  ────────────────────────────    ║
+║  Ollama: http://localhost:11434 ║
+║  WebUI:  http://localhost:8080  ║
+║                                    ║
+║  COMMANDS                        ║
+║  ────────────────────────────    ║
+║  wiki new "title"                ║
+║  wiki-status-panel               ║
+║  wiki-search-dialog              ║
+║                                    ║
+║  Updated: $(date +%H:%M:%S)             ║
+╚════════════════════════════════════╝
+EOF
+    
+    sleep 30
+done

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+"$script_dir/wiki-health-check" >/dev/null 2>&1 || true
+"$script_dir/wiki-auto-sync" >/dev/null 2>&1 || true
+
+if command -v sudo >/dev/null 2>&1 && sudo -n test -x /usr/local/bin/wiki-pre-shutdown-health 2>/dev/null; then
+  sudo -n /usr/local/bin/wiki-pre-shutdown-health >/dev/null 2>&1 || true
+fi
+
+echo "Health check + sync complete. Initiating shutdown..."
+systemctl poweroff

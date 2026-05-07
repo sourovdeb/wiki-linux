@@ -1,0 +1,13 @@
+[Unit]
+Description=Wiki-Linux pre-shutdown health check
+DefaultDependencies=no
+Before=shutdown.target reboot.target halt.target poweroff.target
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/wiki-pre-shutdown-health
+TimeoutStartSec=90
+
+[Install]
+WantedBy=halt.target reboot.target poweroff.target

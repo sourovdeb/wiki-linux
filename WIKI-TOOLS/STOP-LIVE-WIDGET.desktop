@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Stop Live Widget
+Comment=Stop the persistent desktop widget
+Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-desktop-live-stop
+Icon=process-stop
+Terminal=false
+Categories=Utility;

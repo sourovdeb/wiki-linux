@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=🦊 Firefox AI
 Comment=Open Open WebUI in Firefox with the local AI workflow
-Exec=firefox --new-window http://127.0.0.1:8080
+Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/ollama-view firefox
 Icon=firefox
 Type=Application
 Terminal=false

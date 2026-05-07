@@ -1,7 +1,10 @@
 _tmp/
 *.log
+*.pyc
+__pycache__/
 .obsidian/workspace.json
 .obsidian/workspaces.json
+_meta/reports/extension-build/
 
 
 

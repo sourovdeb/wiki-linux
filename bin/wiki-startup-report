@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Generate and display startup session report
+set -euo pipefail
+
+repo_root="${WIKI_ROOT:-/home/sourov/Documents/wiki-linux/wiki-linux}"
+session_dir="$repo_root/_meta/session"
+session_file="$session_dir/$(date +%Y%m%d-%H%M%S)-startup.md"
+
+mkdir -p "$session_dir"
+
+# Check system status
+page_count=$(find "$repo_root" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+daemon_status=$(systemctl --user is-active wiki-monitor 2>&1 | tr -d '\n' | awk '{print $1}')
+[ -z "$daemon_status" ] && daemon_status="down"
+ollama_status=$(curl -fsS --max-time 2 http://127.0.0.1:11434 >/dev/null 2>&1 && echo "yes" || echo "no")
+webui_status=$(curl -fsS --max-time 2 http://127.0.0.1:8080 >/dev/null 2>&1 && echo "yes" || echo "no")
+git_summary=$(git -C "$repo_root" log -1 --pretty='%ar — %s' 2>/dev/null || echo "no commits")
+
+# Get recent changes
+changed_files=$(git -C "$repo_root" diff --name-only HEAD~5..HEAD 2>/dev/null | head -5 | sed 's/^/  • /' || echo "  (no changes)")
+
+# Detect issues
+issues=""
+[[ "$daemon_status" != "active" ]] && issues="${issues}- wiki-monitor is $daemon_status\n"
+[[ "$ollama_status" != "yes" ]] && issues="${issues}- Ollama API is down\n"
+
+# Generate report
+cat > "$session_file" <<EOF
+# Wiki-Linux Startup Report
+
+**Session**: $(date '+%b %d, %Y %H:%M')  
+**Status**: $([ -z "$issues" ] && echo "✓ All systems operational" || echo "⚠ Attention needed")
+
+---
+
+## System Status
+
+| Component | Status |
+|-----------|--------|
+| Wiki pages | $page_count |
+| wiki-monitor | $daemon_status |
+| Ollama API | $ollama_status |
+| Open WebUI | $webui_status |
+| Latest commit | $git_summary |
+
+---
+
+## Since Last Session
+
+Recent files changed:
+$changed_files
+
+---
+
+## Quick Start
+
+**Search**: \`Super+Space\` or \`wiki-search\`  
+**Status**: \`wiki-status-panel\`  
+**New note**: \`wiki new "title"\`  
+**Ask AI**: Drop files in ~/Downloads, daemon auto-ingests
+
+**Web UIs**:
+- Ollama models: http://127.0.0.1:11434
+- Open WebUI: http://127.0.0.1:8080
+
+---
+
+$([ -n "$issues" ] && echo "
+## ⚠ Issues Detected
+
+${issues}
+Fix with: \`systemctl --user restart wiki-monitor\`
+" || echo "")
+EOF
+
+# Display in terminal or GUI based on DISPLAY
+if [ -n "${DISPLAY:-}" ]; then
+    zenity --text-info --title="Wiki-Linux Startup Report" --filename="$session_file" --width=700 --height=600 2>/dev/null &
+else
+    cat "$session_file"
+fi
+
+echo "📊 Startup report: $session_file"

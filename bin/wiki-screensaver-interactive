@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+wiki_root="${WIKI_ROOT:-$HOME/wiki}"
+if [[ ! -d "$wiki_root" ]]; then
+  wiki_root="$repo_root"
+fi
+
+oneshot="${1:-}"
+
+status_line() {
+  local monitor webui pages
+  pages=$(find "$wiki_root" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+  monitor=$(systemctl --user is-active wiki-monitor 2>/dev/null || true)
+  [[ -z "$monitor" ]] && monitor="inactive"
+  if curl -fsS --max-time 2 http://127.0.0.1:8080 >/dev/null 2>&1; then
+    webui="up"
+  else
+    webui="down"
+  fi
+  printf "Pages:%s  wiki-monitor:%s  webui:%s  time:%s" "$pages" "$monitor" "$webui" "$(date +%H:%M:%S)"
+}
+
+run_action() {
+  local key="$1"
+  case "$key" in
+    s|S)
+      "$repo_root/bin/wiki-search-dialog" >/dev/null 2>&1 &
+      ;;
+    n|N)
+      if [[ -x "$repo_root/bin/wiki-new-note" ]]; then
+        "$repo_root/bin/wiki-new-note" >/dev/null 2>&1 &
+      fi
+      ;;
+    w|W)
+      xdg-open http://127.0.0.1:8080 >/dev/null 2>&1 &
+      ;;
+    l|L)
+      xfce4-screensaver-command -l >/dev/null 2>&1 || true
+      ;;
+    q|Q)
+      return 10
+      ;;
+  esac
+  return 0
+}
+
+cleanup() {
+  tput cnorm 2>/dev/null || true
+  stty sane 2>/dev/null || true
+}
+trap cleanup EXIT
+
+tput civis 2>/dev/null || true
+
+while true; do
+  clear || true
+  cat <<'EOF'
+╔══════════════════════════════════════════════════════════════╗
+║                WIKI-LINUX INTERACTIVE SCREENSAVER           ║
+╠══════════════════════════════════════════════════════════════╣
+║ s: Search wiki      n: New note      w: Open WebUI          ║
+║ l: Lock screen      q: Quit panel                           ║
+╠══════════════════════════════════════════════════════════════╣
+EOF
+  printf "║ %-60s ║\n" "$(status_line)"
+  cat <<'EOF'
+╠══════════════════════════════════════════════════════════════╣
+║ Goal: Keep onboarding and status visible without leaving desktop. ║
+╚══════════════════════════════════════════════════════════════╝
+EOF
+
+  if [[ "$oneshot" == "--oneshot" ]]; then
+    read -r -s -n1 -t 15 key || true
+    if [[ -n "${key:-}" ]]; then
+      set +e
+      run_action "$key"
+      rc=$?
+      set -e
+      if [[ "$rc" -eq 10 ]]; then
+        exit 0
+      fi
+    fi
+    exit 0
+  fi
+
+  read -r -s -n1 -t 2 key || true
+  if [[ -n "${key:-}" ]]; then
+    set +e
+    run_action "$key"
+    rc=$?
+    set -e
+    if [[ "$rc" -eq 10 ]]; then
+      exit 0
+    fi
+  fi
+done

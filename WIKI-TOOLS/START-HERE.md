@@ -13,9 +13,17 @@ This page is the easiest entry point for a new user.
 
 ## First Three Places To Click
 
+- [[WIKI-TOOLS/12-WIKI-HOW-IT-WORKS.desktop|Wiki: What It Is + How To Use]] for a plain-language intro.
 - [[system/overview|Machine overview]] to understand what this computer is tracking.
 - [[sources/README|Sources]] to add articles, notes, or documents.
 - [[_meta/recent|Recent changes]] to see what changed last.
+
+## Desktop Quick Use
+
+- Open [[WIKI-TOOLS/1-SEARCH-BOX.desktop|Search Box]] to ask questions and search wiki pages.
+- Open [[WIKI-TOOLS/13-OLLAMA-VIEW.desktop|Ollama View]] to launch local AI chat.
+- Open [[WIKI-TOOLS/9-DASHBOARD.desktop|Dashboard]] for daily status and workflow links.
+- Open [[WIKI-TOOLS/5-LINT.desktop|Lint]] when you want a quick wiki health check.
 
 ## If You Want To...
 
@@ -38,5 +46,11 @@ This page is the easiest entry point for a new user.
 Open the vault in Obsidian if you want the easiest clickable interface.
 
 ```bash
-wiki open
+obsidian /home/sourov/Documents/wiki-linux/wiki-linux
+```
+
+If Obsidian is not installed, open the wiki in your default file viewer:
+
+```bash
+xdg-open /home/sourov/Documents/wiki-linux/wiki-linux
 ```

@@ -1,7 +1,8 @@
 [Desktop Entry]
-Name=🤖 Ollama Chat (Open WebUI)
-Comment=Chat with your local AI — mistral, llama3.2, qwen2.5-coder
+Name=Ollama View
+Comment=Open Open WebUI with startup health checks
 Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/ollama-view auto
 Icon=open-webui
-Terminal=false
 Type=Application
+Terminal=false
+Categories=Utility;Development;

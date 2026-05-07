@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+wiki_root="${WIKI_ROOT:-$HOME/wiki}"
+dashboard_note="$repo_root/user/notes/my-day.md"
+activity_log="$repo_root/_meta/log.md"
+recent_changes="$repo_root/_meta/recent.md"
+
+if [[ ! -d "$wiki_root" ]]; then
+	wiki_root="$repo_root"
+fi
+
+page_count="$(find "$wiki_root" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
+daemon_status="$(systemctl --user is-active wiki-monitor 2>/dev/null || echo unknown)"
+ollama_status="down"
+if curl -fsS --max-time 3 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+	ollama_status="active(api)"
+elif systemctl --user is-active wiki-ollama.service 2>/dev/null | grep -q active; then
+	ollama_status="active(user-service)"
+elif systemctl is-active ollama 2>/dev/null | grep -q active; then
+	ollama_status="active(system-service)"
+fi
+openwebui_status="down"
+if curl -fsS --max-time 3 http://127.0.0.1:8080 >/dev/null 2>&1; then
+	openwebui_status="active(http)"
+elif pgrep -af "open-webui" >/dev/null 2>&1; then
+	openwebui_status="active(app)"
+fi
+git_branch="$(git -C "$repo_root" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+git_summary="$(git -C "$repo_root" log -1 --pretty='%ar — %s' 2>/dev/null || echo 'no git history yet')"
+
+cat <<EOF
+Wiki Status
+===========
+
+Wiki root:        $wiki_root
+Dashboard note:    $dashboard_note
+Pages:             $page_count
+wiki-monitor:      $daemon_status
+ollama:            $ollama_status
+open-webui:        $openwebui_status
+git branch:        $git_branch
+latest commit:     $git_summary
+
+Quick links
+-----------
+- Activity log:    $activity_log
+- Recent changes:  $recent_changes
+- Open WebUI:      http://127.0.0.1:8080
+- Next session:    _meta/task-log/2026-05-05/220000-dashboard-update.md
+EOF

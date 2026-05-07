@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ollama Local Assistant</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Ollama Local Assistant</h1>
+      <div class="model-row">
+        <label for="modelInput">Model</label>
+        <input id="modelInput" value="qwen2.5-coder:3b" />
+      </div>
+    </header>
+
+    <main>
+      <section class="actions">
+        <button id="summarizeBtn">Summarize Website</button>
+        <button id="searchBtn">Search Specific Info</button>
+        <button id="crawlBtn">Crawl Visible Links</button>
+        <button id="pdfBtn">Download PDF Links</button>
+        <button id="fillFormBtn">Fill Form (with JSON plan)</button>
+      </section>
+
+      <section id="chatLog" class="chat-log"></section>
+
+      <section class="composer">
+        <textarea id="promptInput" placeholder="Ask about this page, summarize, extract info, or provide a form-fill instruction."></textarea>
+        <button id="sendBtn">Send</button>
+      </section>
+    </main>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

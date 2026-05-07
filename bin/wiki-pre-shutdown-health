@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  echo "This script must run as root"
+  exit 1
+fi
+
+log_dir="/var/log/wiki-linux"
+mkdir -p "$log_dir"
+ts="$(date -u +%Y%m%d-%H%M%S)"
+log_file="$log_dir/pre-shutdown-health-$ts.log"
+
+{
+  echo "[wiki-pre-shutdown-health] start $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  echo "uptime: $(uptime -p 2>/dev/null || true)"
+  echo "disk root: $(df -h / | tail -1)"
+  echo "memory: $(free -h | awk 'NR==2 {print $3"/"$2}')"
+  echo "load: $(cat /proc/loadavg | awk '{print $1, $2, $3}')"
+
+  if command -v runuser >/dev/null 2>&1; then
+    runuser -u sourov -- /home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-health-check >/dev/null 2>&1 || true
+    runuser -u sourov -- /home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-auto-sync >/dev/null 2>&1 || true
+  fi
+
+  echo "[wiki-pre-shutdown-health] complete $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+} >> "$log_file" 2>&1
+
+echo "$log_file"

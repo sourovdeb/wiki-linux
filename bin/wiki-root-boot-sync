@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  echo "This script must run as root"
+  exit 1
+fi
+
+wiki_root="${WIKI_ROOT:-/home/sourov/wiki}"
+backup_root="/var/lib/wiki-linux/boot-sync"
+log_dir="/var/log/wiki-linux"
+mkdir -p "$backup_root" "$log_dir"
+ts="$(date -u +%Y%m%d-%H%M%S)"
+log_file="$log_dir/root-boot-sync-$ts.log"
+
+{
+  echo "[wiki-root-boot-sync] start $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  echo "wiki_root=$wiki_root"
+
+  if [[ -d "$wiki_root" ]]; then
+    mkdir -p "$backup_root/wiki"
+    rsync -a --delete "$wiki_root/" "$backup_root/wiki/"
+    echo "wiki rsync: ok"
+  else
+    echo "wiki rsync: skipped (missing wiki root)"
+  fi
+
+  mkdir -p "$backup_root/system"
+  for f in /etc/fstab /etc/hostname /etc/hosts /etc/locale.conf /etc/vconsole.conf; do
+    if [[ -f "$f" ]]; then
+      cp -f "$f" "$backup_root/system/$(basename "$f")"
+    fi
+  done
+
+  if [[ -d /boot/loader ]]; then
+    mkdir -p "$backup_root/boot/loader"
+    rsync -a --delete /boot/loader/ "$backup_root/boot/loader/"
+  fi
+
+  echo "[wiki-root-boot-sync] complete $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+} >> "$log_file" 2>&1
+
+echo "$log_file"

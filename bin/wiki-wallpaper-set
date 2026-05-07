@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+wallpaper="$($script_dir/wiki-wallpaper-gen)"
+
+if [[ ! -f "$wallpaper" ]]; then
+  echo "Wallpaper generation failed"
+  exit 1
+fi
+
+set_count=0
+while IFS= read -r key; do
+  [[ -z "$key" ]] && continue
+  if xfconf-query -c xfce4-desktop -p "$key" -s "$wallpaper" 2>/dev/null; then
+    set_count=$((set_count + 1))
+  fi
+done < <(xfconf-query -c xfce4-desktop -l 2>/dev/null | grep '/backdrop/.*/image-path$' || true)
+
+if [[ "$set_count" -eq 0 ]]; then
+  # Fallback for common monitor keys.
+  for key in \
+    /backdrop/screen0/monitor0/image-path \
+    /backdrop/screen0/monitorHDMI-1/image-path \
+    /backdrop/screen0/monitorDP-1/image-path \
+    /backdrop/screen0/monitorVirtual-1/image-path; do
+    xfconf-query -c xfce4-desktop -p "$key" -n -t string -s "$wallpaper" 2>/dev/null || true
+  done
+fi
+
+echo "Wallpaper updated: $wallpaper"

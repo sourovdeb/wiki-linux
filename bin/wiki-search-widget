@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# bin/wiki-search-widget — Floating LLM search dialog for wiki-linux.
+#
+# A minimal single-purpose widget: type a question, get an LLM answer
+# synthesised from your wiki + Arch Wiki cache. Designed to be bound to
+# a global keyboard shortcut (e.g. Super+W) so the user can query the
+# wiki from anywhere on the desktop.
+#
+# Usage:
+#   wiki-search-widget               # interactive: opens dialog, shows answer
+#   wiki-search-widget "my question" # headless: answer printed to stdout
+#
+# Requires: yad OR zenity for the dialog; the wiki CLI for the LLM call.
+# Falls back gracefully to a plain terminal read if neither is present.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
+WIKI_BIN="${WIKI_BIN:-$HOME/.local/bin/wiki}"
+
+# If a question was passed directly on the command line, answer it and exit.
+if [[ $# -gt 0 ]]; then
+  WIKI_ROOT="$WIKI_ROOT" "$WIKI_BIN" ask "$@"
+  exit $?
+fi
+
+# ── Interactive mode ──────────────────────────────────────────────────────────
+
+# Prompt for the question.
+if command -v yad &>/dev/null; then
+  QUESTION=$(yad \
+    --entry \
+    --title="wiki-linux — Ask your wiki" \
+    --width=500 \
+    --text="<b>Ask the wiki</b>\n\nYour question will be answered using your wiki\nand the local Arch Wiki cache.\n" \
+    --entry-label="Question:" \
+    --button="Ask:0" \
+    --button="Cancel:1" \
+    2>/dev/null) || exit 0
+elif command -v zenity &>/dev/null; then
+  QUESTION=$(zenity \
+    --entry \
+    --title="wiki-linux — Ask your wiki" \
+    --width=480 \
+    --text="Ask the wiki (searches your notes + Arch Wiki cache):" \
+    2>/dev/null) || exit 0
+else
+  # Plain terminal fallback.
+  printf "wiki-linux search > "
+  read -r QUESTION
+fi
+
+[[ -z "$QUESTION" ]] && exit 0
+
+# ── Get the answer ────────────────────────────────────────────────────────────
+ANSWER=$(WIKI_ROOT="$WIKI_ROOT" "$WIKI_BIN" ask "$QUESTION" 2>&1) || \
+  ANSWER="Error: wiki command failed. Is the wiki CLI installed?"
+
+# ── Display the answer ────────────────────────────────────────────────────────
+if command -v yad &>/dev/null; then
+  yad \
+    --text-info \
+    --title="wiki-linux — Answer" \
+    --width=640 --height=480 \
+    --fontname="Monospace 10" \
+    --fore="#e8e8e8" \
+    --back="#1e1e2e" \
+    --button="Ask again:1" \
+    --button="Close:0" \
+    <<< "$ANSWER" 2>/dev/null
+  # "Ask again" loops back
+  [[ $? -eq 1 ]] && exec "$0"
+elif command -v zenity &>/dev/null; then
+  zenity \
+    --text-info \
+    --title="wiki-linux — Answer to: ${QUESTION:0:50}" \
+    --width=620 --height=460 \
+    <<< "$ANSWER" 2>/dev/null || true
+elif command -v notify-send &>/dev/null; then
+  # Trim to notification length limit.
+  SHORT="${ANSWER:0:300}"
+  notify-send "wiki answer" "$SHORT" 2>/dev/null || true
+  echo "$ANSWER"
+else
+  echo "$ANSWER"
+fi

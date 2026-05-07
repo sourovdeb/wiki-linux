@@ -2,8 +2,10 @@
 # wiki-welcome — shown at every login via autostart
 # Displays a styled zenity dialog explaining how wiki-linux works.
 
-WIKI_ROOT="${HOME}/wiki"
-PROJECT_ROOT="${HOME}/Documents/wiki-linux/wiki-linux"
+# Locate the project root by following symlinks from the script location.
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+WIKI_ROOT="${WIKI_ROOT:-$HOME/wiki}"
 
 # Get live stats for the popup
 page_count=$(find "$WIKI_ROOT" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')

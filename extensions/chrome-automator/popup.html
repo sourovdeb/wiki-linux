@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wiki Automator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 360px; font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+  .header { background: #1e293b; padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #334155; }
+  .header h1 { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
+  .dot.online { background: #22c55e; }
+  .tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; }
+  .tab { flex: 1; padding: 8px; font-size: 11px; text-align: center; cursor: pointer; color: #94a3b8; border-bottom: 2px solid transparent; }
+  .tab.active { color: #38bdf8; border-color: #38bdf8; }
+  .panel { display: none; padding: 12px; }
+  .panel.active { display: block; }
+  .section { margin-bottom: 14px; }
+  .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .platform-btn { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; cursor: pointer; color: #e2e8f0; font-size: 12px; text-align: center; }
+  .platform-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+  .platform-btn.captured { border-color: #22c55e; color: #22c55e; }
+  .btn { width: 100%; padding: 9px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; margin-top: 4px; }
+  .btn-primary { background: #0284c7; color: white; }
+  .btn-primary:hover { background: #0369a1; }
+  .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-danger { background: #7f1d1d; color: #fca5a5; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  input, select, textarea { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 7px 9px; color: #e2e8f0; font-size: 12px; margin-top: 4px; }
+  textarea { height: 80px; resize: vertical; font-family: monospace; }
+  .status-bar { font-size: 11px; color: #94a3b8; background: #1e293b; padding: 6px 12px; border-top: 1px solid #334155; min-height: 28px; }
+  .progress { background: #1e293b; border-radius: 4px; height: 6px; margin-top: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #0284c7; transition: width .3s; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 9999px; margin-left: 6px; }
+  .badge-green { background: #14532d; color: #86efac; }
+  .badge-yellow { background: #713f12; color: #fde68a; }
+  .badge-red { background: #7f1d1d; color: #fca5a5; }
+  .job-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1e293b; font-size: 12px; }
+  .job-row:last-child { border-bottom: none; }
+  .file-drop { border: 2px dashed #334155; border-radius: 6px; padding: 12px; text-align: center; font-size: 11px; color: #64748b; cursor: pointer; margin-top: 4px; }
+  .file-drop:hover { border-color: #38bdf8; color: #38bdf8; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="dot" id="serverDot"></div>
+  <h1>Wiki Automator</h1>
+  <span id="serverLabel" style="font-size:11px;color:#64748b;margin-left:auto">checking...</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="email">Email</div>
+  <div class="tab" data-tab="social">Social</div>
+  <div class="tab" data-tab="sessions">Sessions</div>
+  <div class="tab" data-tab="learn">Learn</div>
+</div>
+
+<!-- EMAIL PANEL -->
+<div class="panel active" id="tab-email">
+  <div class="section">
+    <div class="label">Batch CSV / MD</div>
+    <div class="file-drop" id="csvDrop" onclick="document.getElementById('csvFile').click()">
+      Drop CSV or click to browse<br><small>recipient,subject,body_file,attachments</small>
+    </div>
+    <input type="file" id="csvFile" accept=".csv,.md" style="display:none">
+    <div id="csvInfo" style="font-size:11px;color:#22c55e;margin-top:4px;display:none"></div>
+  </div>
+  <div class="section">
+    <div class="label">Email Provider</div>
+    <select id="emailProvider">
+      <option value="gmail">Gmail</option>
+      <option value="proton">ProtonMail</option>
+    </select>
+  </div>
+  <div class="section">
+    <div class="label">AI Body Generation</div>
+    <select id="aiModel">
+      <option value="none">None (use body as-is)</option>
+      <option value="ollama-mistral">Ollama mistral:latest</option>
+      <option value="ollama-llama3">Ollama llama3.2:3b</option>
+    </select>
+  </div>
+  <div class="section">
+    <label style="font-size:12px;display:flex;gap:6px;align-items:center">
+      <input type="checkbox" id="dryRun" checked> Dry run (preview only)
+    </label>
+  </div>
+  <button class="btn btn-primary" id="runEmailBtn" disabled>Run Email Batch</button>
+  <div class="progress" id="emailProgress" style="display:none">
+    <div class="progress-fill" id="emailProgressFill" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- SOCIAL PANEL -->
+<div class="panel" id="tab-social">
+  <div class="section">
+    <div class="label">Platform</div>
+    <div class="platform-grid">
+      <button class="platform-btn" id="social-linkedin" data-platform="linkedin">LinkedIn</button>
+      <button class="platform-btn" id="social-medium" data-platform="medium">Medium</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="label">Post Title</div>
+    <input type="text" id="postTitle" placeholder="Post title...">
+  </div>
+  <div class="section">
+    <div class="label">Content (Markdown)</div>
+    <textarea id="postContent" placeholder="Write or paste content... or load from .md file"></textarea>
+  </div>
+  <div class="section">
+    <label style="font-size:12px;display:flex;gap:6px;align-items:center">
+      <input type="checkbox" id="aiRewrite"> Rewrite with Ollama before posting
+    </label>
+  </div>
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-secondary" id="loadMdBtn" style="flex:1">Load .md</button>
+    <button class="btn btn-primary" id="postBtn" style="flex:2" disabled>Post</button>
+  </div>
+  <input type="file" id="mdFile" accept=".md,.txt" style="display:none">
+</div>
+
+<!-- SESSIONS PANEL -->
+<div class="panel" id="tab-sessions">
+  <div class="section">
+    <div class="label">Capture Login Session</div>
+    <p style="font-size:11px;color:#64748b;margin-bottom:8px">Log in manually first, then capture cookies for Playwright automation.</p>
+    <div class="platform-grid">
+      <button class="platform-btn" data-capture="gmail">📧 Gmail</button>
+      <button class="platform-btn" data-capture="proton">📨 ProtonMail</button>
+      <button class="platform-btn" data-capture="linkedin">💼 LinkedIn</button>
+      <button class="platform-btn" data-capture="medium">✍️ Medium</button>
+    </div>
+  </div>
+  <div class="section" id="sessionStatus">
+    <div class="label">Session Status</div>
+    <div id="sessionList" style="font-size:12px;color:#64748b">Loading...</div>
+  </div>
+</div>
+
+<!-- LEARN PANEL -->
+<div class="panel" id="tab-learn">
+  <div class="section">
+    <div class="label">Activity Recordings</div>
+    <div id="recordingStats" style="font-size:12px;color:#64748b">Loading...</div>
+  </div>
+  <div class="section">
+    <div class="label">Train from Recordings</div>
+    <p style="font-size:11px;color:#64748b;margin-bottom:8px">Send recordings to Ollama to extract better selectors and action patterns.</p>
+    <button class="btn btn-secondary" id="trainBtn">Analyse Recordings</button>
+  </div>
+  <div id="trainOutput" style="font-size:11px;color:#94a3b8;margin-top:8px;white-space:pre-wrap;display:none"></div>
+</div>
+
+<div class="status-bar" id="statusBar">Ready.</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Email Batch Template
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIRED COLUMNS:
+#   recipient   — email address
+#   subject     — email subject line
+#   body_file   — path to .md file with body (relative to templates/ or absolute)
+#                 OR leave empty and put body text in the "body" column
+#   attachments — semicolon-separated file paths, e.g. cv.pdf;portfolio.pdf
+#                 leave empty if none
+#   provider    — gmail | proton  (overrides global setting if set)
+#   delay       — seconds to wait between emails (default: 3)
+#
+# NOTES:
+#   - Lines starting with # are ignored
+#   - Wrap values containing commas in double quotes
+#   - body_file takes priority over body column
+#   - Use relative paths from the templates/ directory for body files and attachments
+# ─────────────────────────────────────────────────────────────────────────────
+
+recipient,subject,body_file,attachments,provider,delay
+john.smith@school.fr,Application – English Teacher Position,bodies/teacher_application.md,attachments/cv.pdf;attachments/cover_letter.pdf,gmail,5
+marie.dupont@lycee-paris.fr,Candidature Formateur Anglais – CELTA Certified,bodies/teacher_application.md,attachments/cv.pdf,gmail,4
+director@businessschool.com,Partnership Proposal – EFL Training Programme,bodies/partnership.md,attachments/programme_overview.pdf,gmail,6

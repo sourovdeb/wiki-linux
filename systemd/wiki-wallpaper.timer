@@ -2,8 +2,9 @@
 Description=Wiki Live Wallpaper Timer
 
 [Timer]
-OnBootSec=1min
-OnUnitActiveSec=30sec
+OnBootSec=2min
+OnUnitActiveSec=10min
+Persistent=true
 Unit=wiki-wallpaper.service
 
 [Install]

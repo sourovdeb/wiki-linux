@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch SSD mount points for wiki backup
+
+[Path]
+PathExistsGlob=/run/media/%u/*
+PathExistsGlob=/media/%u/*
+Unit=wiki-ssd-backup.service
+
+[Install]
+WantedBy=default.target

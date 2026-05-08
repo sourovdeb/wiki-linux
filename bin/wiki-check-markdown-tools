@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WIKI_ROOT="$HOME/Documents/wiki-linux/wiki-linux"
+VENV_PY="$WIKI_ROOT/.venv/bin/python"
+
+ok() { echo "[OK] $*"; }
+warn() { echo "[WARN] $*"; }
+
+check_cmd() {
+  local cmd="$1"
+  if command -v "$cmd" >/dev/null 2>&1; then
+    ok "Command found: $cmd"
+  else
+    warn "Missing command: $cmd"
+  fi
+}
+
+check_py_pkg() {
+  local pkg="$1"
+  if [[ -x "$VENV_PY" ]] && "$VENV_PY" -c "import ${pkg}" >/dev/null 2>&1; then
+    ok "Python package available in .venv: $pkg"
+  elif python3 -c "import ${pkg}" >/dev/null 2>&1; then
+    ok "Python package available in system Python: $pkg"
+  else
+    warn "Missing Python package: $pkg"
+  fi
+}
+
+echo "== Wiki markdown conversion tool check =="
+check_cmd python3
+check_cmd rg
+check_cmd curl
+check_cmd unzip
+check_cmd pdftotext
+check_cmd pandoc
+check_cmd ffmpeg
+
+check_py_pkg markitdown
+check_py_pkg watchdog
+check_py_pkg openai
+check_py_pkg yaml
+check_py_pkg ollama
+
+if [[ ! -x "$VENV_PY" ]]; then
+  warn ".venv missing. Recreate with: python3 -m venv $WIKI_ROOT/.venv"
+fi
+
+echo "Check complete."

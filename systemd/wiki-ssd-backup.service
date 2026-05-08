@@ -1,10 +1,10 @@
 [Unit]
-Description=Wiki File Relocator
-After=network.target
+Description=Wiki SSD Backup On Attach
+After=default.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/env python3 %h/Documents/wiki-linux/wiki-linux/bin/wiki-file-relocate
+ExecStart=%h/Documents/wiki-linux/wiki-linux/bin/wiki-ssd-backup
 WorkingDirectory=%h/Documents/wiki-linux/wiki-linux
 StandardOutput=journal
 StandardError=journal

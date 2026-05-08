@@ -5,7 +5,6 @@
 
 const OLLAMA_API = 'http://127.0.0.1:11434/api';
 const WIKI_INGESTOR_PATH = '/home/sourov/Documents/wiki-linux/wiki-linux';
-const WIKI_CONVERTED_PATH = process.env.HOME + '/wiki/converted';
 
 // Initialize extension storage
 browser.storage.local.get(['models', 'systemStatus'], (result) => {
@@ -142,7 +141,7 @@ async function checkSystemStatus() {
   const status = {
     ollama: { running: false, port: 11434 },
     openwebui: { running: false, port: 8080 },
-    wiklingestor: { installed: false, path: WIKI_INGESTOR_PATH }
+    wikiingestor: { installed: true, path: WIKI_INGESTOR_PATH }
   };
 
   // Check Ollama

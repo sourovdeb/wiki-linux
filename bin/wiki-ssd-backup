@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LOG_TAG="wiki-ssd-backup"
+USER_NAME="${USER:-$(id -un)}"
+HOST="$(hostname -s)"
+WIKI_ROOT="$HOME/Documents/wiki-linux/wiki-linux"
+LEGACY_WIKI="$HOME/wiki"
+LOCK_FILE="/tmp/wiki-ssd-backup.lock"
+
+# Label or marker used to recognize intended backup drives.
+ALLOWED_LABELS_REGEX='^(WIKI_BACKUP|WIKIBACKUP|WIKI-LINUX-BACKUP)$'
+MARKER_FILE=".wiki-backup-target"
+
+log() {
+  logger -t "$LOG_TAG" "$*"
+  echo "[$LOG_TAG] $*"
+}
+
+find_target_mount() {
+  local line label mount
+  while IFS= read -r line; do
+    label="${line%% *}"
+    mount="${line#* }"
+    [[ -z "$mount" ]] && continue
+    [[ ! -d "$mount" ]] && continue
+
+    if [[ "$label" =~ $ALLOWED_LABELS_REGEX ]]; then
+      echo "$mount"
+      return 0
+    fi
+
+    if [[ -f "$mount/$MARKER_FILE" ]]; then
+      echo "$mount"
+      return 0
+    fi
+  done < <(lsblk -rno LABEL,MOUNTPOINT 2>/dev/null)
+
+  # Fallback scan for common mount roots + marker file only.
+  for base in "/run/media/$USER_NAME" "/media/$USER_NAME" "/mnt"; do
+    [[ -d "$base" ]] || continue
+    while IFS= read -r -d '' mp; do
+      if [[ -f "$mp/$MARKER_FILE" ]]; then
+        echo "$mp"
+        return 0
+      fi
+    done < <(find "$base" -mindepth 1 -maxdepth 2 -type d -print0 2>/dev/null)
+  done
+
+  return 1
+}
+
+run_backup() {
+  local target_mount="$1"
+  local backup_root="$target_mount/wiki-linux-backups/$HOST"
+  local current_dir="$backup_root/current"
+  local log_dir="$backup_root/logs"
+
+  mkdir -p "$current_dir" "$log_dir"
+
+  log "Backup target detected at $target_mount"
+
+  rsync -a --delete \
+    --exclude '.git/' \
+    --exclude '.venv/' \
+    --exclude '__pycache__/' \
+    --exclude '*.pyc' \
+    --exclude '_meta/reports/' \
+    "$WIKI_ROOT/" "$current_dir/wiki-linux/"
+
+  if [[ -d "$LEGACY_WIKI" ]]; then
+    rsync -a --delete \
+      --exclude '.git/' \
+      --exclude '__pycache__/' \
+      --exclude '*.pyc' \
+      "$LEGACY_WIKI/" "$current_dir/wiki-home/"
+  fi
+
+  date -Iseconds > "$current_dir/LAST_BACKUP_AT"
+  log "Backup completed: $current_dir"
+}
+
+main() {
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    log "Another backup instance is running; skipping"
+    exit 0
+  fi
+
+  if [[ ! -d "$WIKI_ROOT" ]]; then
+    log "Wiki root not found at $WIKI_ROOT"
+    exit 1
+  fi
+
+  local target_mount
+  if ! target_mount="$(find_target_mount)"; then
+    log "No matching SSD mount detected (label or marker)."
+    exit 0
+  fi
+
+  run_backup "$target_mount"
+}
+
+main "$@"

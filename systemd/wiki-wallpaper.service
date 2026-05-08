@@ -1,12 +1,12 @@
 [Unit]
 Description=Wiki Live Wallpaper Update
-After=graphical-session.target
+After=default.target
 
 [Service]
 Type=oneshot
 ExecStart=%h/Documents/wiki-linux/wiki-linux/bin/wiki-wallpaper-set
 Environment=WIKI_ROOT=%h/Documents/wiki-linux/wiki-linux
 Environment=DISPLAY=:0
-Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
 StandardOutput=journal
 StandardError=journal

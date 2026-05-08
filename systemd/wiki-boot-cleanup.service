@@ -1,0 +1,14 @@
+[Unit]
+Description=Wiki Boot Cleanup (safe garbage removal)
+After=default.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/env python3 %h/Documents/wiki-linux/wiki-linux/bin/wiki-boot-cleanup.py
+WorkingDirectory=%h/Documents/wiki-linux/wiki-linux
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

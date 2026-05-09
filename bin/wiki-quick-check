@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# wiki-system-quick-check: One-command system health overview
+
+set -euo pipefail
+
+echo "🔍 Wiki-Linux System Quick Check"
+echo "=================================="
+echo
+
+# Disk space
+echo "💾 Disk Space:"
+df -h / | tail -1 | awk '{printf "   %s / %s available (%s used)\n", $4, $2, $5}'
+echo
+
+# Wiki pages
+if [[ -d "$HOME/wiki" ]]; then
+    page_count=$(find "$HOME/wiki" -name '*.md' 2>/dev/null | wc -l)
+    echo "📄 Wiki Pages: $page_count"
+else
+    echo "📄 Wiki Pages: N/A (not found)"
+fi
+echo
+
+# Services
+echo "🔧 Services:"
+for svc in wiki-monitor wiki-sync.timer wiki-system-maintenance.timer; do
+    status=$(systemctl --user is-active "$svc" 2>/dev/null || echo "inactive")
+    icon=$([ "$status" = "active" ] && echo "✓" || echo "✗")
+    printf "   $icon %-40s %s\n" "$svc:" "$status"
+done
+echo
+
+# Ollama
+echo "🤖 Ollama:"
+if curl -s http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+    model_count=$(curl -s http://127.0.0.1:11434/api/tags 2>/dev/null | grep -o '"name"' | wc -l)
+    echo "   ✓ API running, $model_count model(s) loaded"
+else
+    echo "   ✗ API not responding"
+fi
+echo
+
+# OpenWebUI
+echo "🌐 OpenWebUI:"
+if curl -s http://127.0.0.1:8080 >/dev/null 2>&1; then
+    echo "   ✓ WebUI running"
+else
+    echo "   ✗ WebUI not responding"
+fi
+echo
+
+# Last maintenance
+if [[ -d "$HOME/.local/var/log/wiki-linux" ]]; then
+    last_run=$(ls -t "$HOME/.local/var/log/wiki-linux"/*.json 2>/dev/null | head -1)
+    if [[ -n "$last_run" ]]; then
+        last_time=$(stat -c %y "$last_run" | cut -d' ' -f1-2)
+        echo "🧹 Last Maintenance: $last_time"
+    else
+        echo "🧹 Last Maintenance: None"
+    fi
+else
+    echo "🧹 Last Maintenance: N/A"
+fi
+echo
+
+echo "💡 Pro Tips:"
+echo "   • Run: wiki-system-maintenance  (manual cleanup)"
+echo "   • View: wiki-health-check       (detailed status)"
+echo "   • Optimize: wiki-ollama-optimize (reduce model size)"
+echo "   • Guide: cat MAINTENANCE-GUIDE.md"

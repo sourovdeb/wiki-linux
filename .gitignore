@@ -15,6 +15,7 @@ _meta/daemon.log
 user/library/
 raw/my_library/
 user/research/teaching/
+user/research/teaching/
 
 # Obsidian plugin data (contains API keys)
 .obsidian/plugins/bmo-chatbot/data.json

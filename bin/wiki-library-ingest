@@ -179,6 +179,13 @@ def process_zip(zip_path: Path, dry_run: bool, extract_only: bool):
         move_media(dest, dry_run)
 
 
+def run_tool(tool_path):
+    try:
+        result = subprocess.run(["/home/sourov/Documents/wiki-linux/wiki-linux/.venv/bin/python", tool_path], check=True, capture_output=True, text=True)
+        print(f"Output from {tool_path}:\n{result.stdout}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error running {tool_path}:\n{e.stderr}")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
@@ -203,6 +210,13 @@ def main():
             if _pandoc_available():
                 _run(["pandoc", str(dest), "-o", str(dest.with_suffix(".md")), "--wrap=none"])
         print(f"[DOCX] {f.name} → personal/")
+
+    # Integration of Open WebUI tools
+    run_tool("/home/sourov/Documents/wiki-linux/wiki-linux/copilot/01_wiki_search.py")
+    run_tool("/home/sourov/Documents/wiki-linux/wiki-linux/copilot/02_url_to_wiki.py")
+    run_tool("/home/sourov/Documents/wiki-linux/wiki-linux/copilot/03_linux_sysinfo.py")
+    run_tool("/home/sourov/Documents/wiki-linux/wiki-linux/copilot/04_file_finder.py")
+    run_tool("/home/sourov/Documents/wiki-linux/wiki-linux/copilot/05_web_search_ddg.py")
 
     if not args.dry_run:
         # Re-sync KB

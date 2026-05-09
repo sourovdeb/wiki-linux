@@ -66,6 +66,9 @@
     </div>
     <input type="file" id="csvFile" accept=".csv,.md" style="display:none">
     <div id="csvInfo" style="font-size:11px;color:#22c55e;margin-top:4px;display:none"></div>
+    <p style="font-size:11px;color:#64748b;margin-top:6px">
+      Tip: first row must be headers. Supported columns: recipient, subject, body_file, body, attachments, provider, delay.
+    </p>
   </div>
   <div class="section">
     <div class="label">Email Provider</div>
@@ -78,9 +81,9 @@
     <div class="label">AI Body Generation</div>
     <select id="aiModel">
       <option value="none">None (use body as-is)</option>
-      <option value="ollama-mistral">Ollama mistral:latest</option>
-      <option value="ollama-llama3">Ollama llama3.2:3b</option>
+      <option value="" disabled>Loading installed models...</option>
     </select>
+    <p style="font-size:11px;color:#64748b;margin-top:6px">Model list is loaded from local Ollama via server.</p>
   </div>
   <div class="section">
     <label style="font-size:12px;display:flex;gap:6px;align-items:center">
@@ -115,6 +118,11 @@
       <input type="checkbox" id="aiRewrite"> Rewrite with Ollama before posting
     </label>
   </div>
+  <div class="section">
+    <label style="font-size:12px;display:flex;gap:6px;align-items:center">
+      <input type="checkbox" id="socialDryRun" checked> Dry run (validate only)
+    </label>
+  </div>
   <div style="display:flex;gap:6px">
     <button class="btn btn-secondary" id="loadMdBtn" style="flex:1">Load .md</button>
     <button class="btn btn-primary" id="postBtn" style="flex:2" disabled>Post</button>
@@ -137,6 +145,7 @@
   <div class="section" id="sessionStatus">
     <div class="label">Session Status</div>
     <div id="sessionList" style="font-size:12px;color:#64748b">Loading...</div>
+    <p style="font-size:11px;color:#64748b;margin-top:8px">Recapture if cookie age is old (yellow/red badge).</p>
   </div>
 </div>
 
@@ -152,6 +161,12 @@
     <button class="btn btn-secondary" id="trainBtn">Analyse Recordings</button>
   </div>
   <div id="trainOutput" style="font-size:11px;color:#94a3b8;margin-top:8px;white-space:pre-wrap;display:none"></div>
+  <div class="section" style="margin-top:10px">
+    <div class="label">Quick Guidance</div>
+    <p style="font-size:11px;color:#64748b;line-height:1.4">
+      1) Capture sessions first. 2) Run email/social in dry run. 3) Review output, then uncheck dry run for live send.
+    </p>
+  </div>
 </div>
 
 <div class="status-bar" id="statusBar">Ready.</div>

@@ -3,6 +3,7 @@
 const SERVER = "http://127.0.0.1:7070";
 let csvData = null;
 let activePlatforms = new Set();
+let modelsLoadedOnce = false;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function setStatus(msg, type = "info") {
@@ -22,6 +23,112 @@ async function apiPost(path, body) {
     body: JSON.stringify(body),
   });
   return r.json();
+}
+
+function parseCsvLine(line) {
+  const out = [];
+  let cell = "";
+  let inQuotes = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === "\"") {
+      if (inQuotes && line[index + 1] === "\"") {
+        cell += "\"";
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (char === "," && !inQuotes) {
+      out.push(cell.trim());
+      cell = "";
+      continue;
+    }
+    cell += char;
+  }
+  out.push(cell.trim());
+  return out;
+}
+
+function normalizeHeader(value) {
+  return String(value || "").toLowerCase().replace(/\s+/g, "_").trim();
+}
+
+function parseCsvText(text) {
+  const rows = [];
+  const lines = String(text || "").split(/\r?\n/);
+  for (const rawLine of lines) {
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    rows.push(parseCsvLine(rawLine));
+  }
+  if (rows.length < 2) {
+    return { error: "CSV needs a header row plus at least one data row." };
+  }
+
+  const headers = rows[0].map(normalizeHeader);
+  if (!headers.includes("recipient")) {
+    return { error: "CSV header must include `recipient`." };
+  }
+
+  const indexOf = (name) => headers.indexOf(name);
+  const cell = (arr, name) => {
+    const index = indexOf(name);
+    return index >= 0 ? String(arr[index] || "").trim() : "";
+  };
+
+  const parsed = rows.slice(1).map((entry) => ({
+    recipient: cell(entry, "recipient"),
+    subject: cell(entry, "subject"),
+    body_file: cell(entry, "body_file"),
+    body: cell(entry, "body"),
+    attachments: cell(entry, "attachments"),
+    provider: cell(entry, "provider"),
+    delay: Number.parseInt(cell(entry, "delay"), 10) || 3
+  })).filter((entry) => entry.recipient);
+
+  if (!parsed.length) {
+    return { error: "No valid recipient rows found in CSV." };
+  }
+
+  return { rows: parsed };
+}
+
+async function loadAiModels() {
+  const select = document.getElementById("aiModel");
+  const previousValue = select.value;
+  const noneOption = '<option value="none">None (use body as-is)</option>';
+
+  try {
+    const response = await fetch(`${SERVER}/api/ollama/models`, { signal: AbortSignal.timeout(3000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const models = Array.isArray(payload?.models) ? payload.models : [];
+
+    select.innerHTML = noneOption;
+    for (const model of models) {
+      const name = String(model || "").trim();
+      if (!name) continue;
+      const option = document.createElement("option");
+      option.value = name;
+      option.textContent = `Ollama ${name}`;
+      select.appendChild(option);
+    }
+
+    if (previousValue && Array.from(select.options).some((opt) => opt.value === previousValue)) {
+      select.value = previousValue;
+    } else if (models.length) {
+      select.value = models[0];
+    } else {
+      select.value = "none";
+    }
+    modelsLoadedOnce = true;
+  } catch (_e) {
+    if (!modelsLoadedOnce) {
+      select.innerHTML = `${noneOption}<option value="mistral:latest">Ollama mistral:latest</option><option value="llama3.2:3b">Ollama llama3.2:3b</option>`;
+    }
+  }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -44,29 +151,44 @@ async function checkHealth() {
     label.textContent = "server online";
     document.getElementById("runEmailBtn").disabled = !csvData;
     document.getElementById("postBtn").disabled = !activePlatforms.size;
+    if (!modelsLoadedOnce) {
+      loadAiModels().catch(() => {});
+    }
   } else {
     dot.className = "dot";
     label.textContent = "server offline";
+    document.getElementById("runEmailBtn").disabled = true;
+    document.getElementById("postBtn").disabled = true;
     setStatus("Start the Python server: cd server && python server.py", "error");
   }
 }
 checkHealth();
 setInterval(checkHealth, 10000);
+setInterval(() => {
+  loadAiModels().catch(() => {});
+}, 30000);
 
 // ── CSV loading ───────────────────────────────────────────────────────────────
 document.getElementById("csvFile").addEventListener("change", async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   const text = await file.text();
-  const lines = text.trim().split("\n").filter(l => l && !l.startsWith("#"));
-  // Skip header row
-  const rows = lines.slice(1).map(l => {
-    const [recipient, subject, body_file, attachments, provider, delay] = l.split(",").map(s => s.trim().replace(/^"|"$/g, ""));
-    return { recipient, subject, body_file, attachments, provider, delay: parseInt(delay) || 3 };
-  }).filter(r => r.recipient);
+  const parsed = parseCsvText(text);
+  if (parsed.error) {
+    setStatus(parsed.error, "error");
+    document.getElementById("csvInfo").textContent = parsed.error;
+    document.getElementById("csvInfo").style.display = "block";
+    document.getElementById("csvInfo").style.color = "#fca5a5";
+    csvData = null;
+    document.getElementById("runEmailBtn").disabled = true;
+    return;
+  }
+
+  const rows = parsed.rows;
   csvData = { file: file.name, rows };
   document.getElementById("csvInfo").textContent = `Loaded ${rows.length} emails from ${file.name}`;
   document.getElementById("csvInfo").style.display = "block";
+  document.getElementById("csvInfo").style.color = "#22c55e";
   document.getElementById("runEmailBtn").disabled = false;
   setStatus(`CSV loaded: ${rows.length} emails`);
 });
@@ -155,14 +277,16 @@ document.getElementById("mdFile").addEventListener("change", async (e) => {
 
 document.getElementById("postBtn").addEventListener("click", async () => {
   const platforms = Array.from(activePlatforms);
+  const socialDryRun = document.getElementById("socialDryRun").checked;
   const job = {
     type: "social_post",
     platforms,
     title: document.getElementById("postTitle").value,
     content: document.getElementById("postContent").value,
     ai_rewrite: document.getElementById("aiRewrite").checked,
+    dry_run: socialDryRun,
   };
-  setStatus(`Posting to ${platforms.join(", ")}...`);
+  setStatus(`${socialDryRun ? "Dry-run validating" : "Posting"} to ${platforms.join(", ")}...`);
   const res = await sendMsg("RUN_JOB", { job });
   if (res?.error) setStatus(`Error: ${res.error}`, "error");
   else if (res?.job_id) pollJobStatus(res.job_id, "social");

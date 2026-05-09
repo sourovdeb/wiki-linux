@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PostFlow — Publishing Control</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --bg:#f7f7f5;
+    --surface:#ffffff;
+    --ink:oklch(0.18 0.01 260);
+    --ink-soft:oklch(0.45 0.01 260);
+    --ink-mute:oklch(0.62 0.01 260);
+    --line:oklch(0.92 0.005 260);
+    --line-soft:oklch(0.95 0.004 260);
+    --accent:oklch(0.55 0.14 250);
+    --accent-soft:oklch(0.95 0.03 250);
+    --good:oklch(0.6 0.13 150);
+    --good-soft:oklch(0.95 0.04 150);
+    --warn:oklch(0.72 0.13 75);
+    --warn-soft:oklch(0.96 0.04 80);
+    --bad:oklch(0.58 0.18 25);
+    --bad-soft:oklch(0.96 0.03 25);
+    --radius:10px;
+  }
+  html,body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased;}
+  *{border-color:var(--line);}
+  /* canonical Inter via Google */
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, createContext, useContext } = React;
+
+/* ---------- Icons (inline svg, hand-rolled minimal) ---------- */
+const Ico = ({d, size=16, sw=1.6, fill="none"}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{d}</svg>
+);
+const I = {
+  dash: <Ico d={<><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></>}/>,
+  doc:  <Ico d={<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></>}/>,
+  tag:  <Ico d={<><path d="M20 12.5 12.5 20a2 2 0 0 1-2.8 0L3 13.3V4h9.3L20 11.7a2 2 0 0 1 0 0.8z"/><circle cx="7.5" cy="7.5" r="1.2"/></>}/>,
+  cal:  <Ico d={<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></>}/>,
+  bolt: <Ico d={<polyline points="13 2 4 14 11 14 10 22 20 9 13 9 13 2"/>}/>,
+  cog:  <Ico d={<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></>}/>,
+  search: <Ico d={<><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></>}/>,
+  bell: <Ico d={<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.7 1.7 0 0 0 3.4 0"/></>}/>,
+  plus: <Ico d={<><path d="M12 5v14M5 12h14"/></>}/>,
+  chL:  <Ico d={<polyline points="15 18 9 12 15 6"/>}/>,
+  chR:  <Ico d={<polyline points="9 18 15 12 9 6"/>}/>,
+  chD:  <Ico d={<polyline points="6 9 12 15 18 9"/>}/>,
+  check:<Ico d={<polyline points="20 6 9 17 4 12"/>}/>,
+  x:    <Ico d={<><path d="M18 6 6 18M6 6l12 12"/></>}/>,
+  filter:<Ico d={<polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/>}/>,
+  edit: <Ico d={<><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z"/></>}/>,
+  trash:<Ico d={<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>}/>,
+  more: <Ico d={<><circle cx="12" cy="6" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="18" r="1"/></>}/>,
+  globe:<Ico d={<><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></>}/>,
+  clock:<Ico d={<><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></>}/>,
+  draft:<Ico d={<><path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/><path d="M18 2 22 6 12 16H8v-4z"/></>}/>,
+  bot:  <Ico d={<><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 2v4M9 13h.01M15 13h.01M9 17h6"/></>}/>,
+  zap:  <Ico d={<polyline points="13 2 4 14 11 14 10 22 20 9 13 9 13 2"/>}/>,
+  arr:  <Ico d={<><path d="M5 12h14"/><polyline points="13 6 19 12 13 18"/></>}/>,
+  power:<Ico d={<><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></>}/>,
+  play: <Ico d={<polygon points="6 4 20 12 6 20 6 4" fill="currentColor"/>}/>,
+  link: <Ico d={<><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></>}/>,
+  upload:<Ico d={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>}/>,
+  shield:<Ico d={<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>}/>,
+  alert:<Ico d={<><path d="M12 2 1 21h22z"/><path d="M12 9v5M12 18h.01"/></>}/>,
+  copy: <Ico d={<><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></>}/>,
+  send: <Ico d={<><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></>}/>,
+  rss:  <Ico d={<><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1.4"/></>}/>,
+  eye:  <Ico d={<><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></>}/>,
+  sliders:<Ico d={<><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></>}/>,
+};
+
+/* ---------- Date utils (no deps) ---------- */
+const D = {
+  today: () => new Date(2026, 4, 5),
+  fmt: (d, fmt) => {
+    const m=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    if(fmt==="MMMM yyyy") return `${m[d.getMonth()]} ${d.getFullYear()}`;
+    if(fmt==="EEE") return wd[d.getDay()];
+    if(fmt==="d") return d.getDate();
+    if(fmt==="ymd") return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    return d.toString();
+  },
+  add: (d, n) => { const x=new Date(d); x.setDate(x.getDate()+n); return x; },
+  sow: (d) => { const x=new Date(d); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; },
+  som: (d) => new Date(d.getFullYear(), d.getMonth(), 1),
+  eom: (d) => new Date(d.getFullYear(), d.getMonth()+1, 0),
+  addM: (d, n) => new Date(d.getFullYear(), d.getMonth()+n, 1),
+  same: (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(),
+  sameMo: (a,b) => a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth(),
+};
+
+/* ---------- App state context ---------- */
+const initialPosts = [
+  { id:1, title:"Migrating from Apache to Caddy: a weekend story", status:"published", date:"2026-05-01", author:"Maya Chen", seo:85, tags:["Infra","Tutorials"], focus:"caddy server", desc:"Step-by-step migration notes from Apache to Caddy."},
+  { id:2, title:"Building a custom block with the Block Editor API", status:"scheduled", date:"2026-05-07", author:"Tom Reyes", seo:92, tags:["Development","Blocks"], focus:"block editor api", desc:"How to ship a production-ready block in 200 lines."},
+  { id:3, title:"May product roundup — what shipped, what's next", status:"draft", date:"2026-05-12", author:"Maya Chen", seo:42, tags:["Updates"], focus:"", desc:""},
+  { id:4, title:"The future of static site rendering", status:"published", date:"2026-04-28", author:"Sara Park", seo:78, tags:["Web Dev","Trends"], focus:"static rendering", desc:"Where SSG, ISR and edge rendering are converging."},
+  { id:5, title:"Compressing images with sharp + a tiny CLI", status:"draft", date:"2026-05-15", author:"Tom Reyes", seo:60, tags:["Performance","Media"], focus:"image compression", desc:"A 40-line script that saved us 1.2 GB/month."},
+  { id:6, title:"Why we moved from RSS to webhook fan-out", status:"scheduled", date:"2026-05-09", author:"Sara Park", seo:88, tags:["Infra"], focus:"webhooks", desc:"Cleaner pipelines, fewer cron jobs."},
+  { id:7, title:"Editorial calendar templates we actually use", status:"draft", date:"2026-05-20", author:"Maya Chen", seo:55, tags:["Editorial"], focus:"editorial calendar", desc:""},
+  { id:8, title:"A 5-minute guide to schema.org for blogs", status:"published", date:"2026-04-22", author:"Tom Reyes", seo:81, tags:["SEO"], focus:"schema.org", desc:"Ship rich results without a plugin."},
+];
+
+const Toast = createContext(null);
+function ToastProvider({children}){
+  const [msgs, setMsgs] = useState([]);
+  const push = (text, kind="ok") => {
+    const id = Math.random().toString(36).slice(2);
+    setMsgs(m => [...m, {id,text,kind}]);
+    setTimeout(()=>setMsgs(m => m.filter(x=>x.id!==id)), 3200);
+  };
+  return (
+    <Toast.Provider value={push}>
+      {children}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+        {msgs.map(m => (
+          <div key={m.id}
+            className={`px-4 py-2.5 rounded-lg shadow-lg border text-sm font-medium animate-[slideIn_.2s_ease] ${m.kind==="ok"?"bg-white text-gray-900 border-gray-200":m.kind==="err"?"bg-red-50 text-red-800 border-red-200":"bg-blue-50 text-blue-800 border-blue-200"}`}>
+            {m.text}
+          </div>
+        ))}
+      </div>
+      <style>{`@keyframes slideIn{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+    </Toast.Provider>
+  );
+}
+const useToast = () => useContext(Toast);
+
+/* ---------- Layout ---------- */
+function Sidebar({route, setRoute, connected}){
+  const items = [
+    { id:"dash", icon:I.dash, label:"Dashboard" },
+    { id:"posts", icon:I.doc, label:"Posts" },
+    { id:"calendar", icon:I.cal, label:"Calendar" },
+    { id:"tags", icon:I.tag, label:"Tags & Rules" },
+    { id:"automation", icon:I.bolt, label:"Automations" },
+    { id:"settings", icon:I.cog, label:"Settings" },
+  ];
+  return (
+    <aside className="w-60 bg-white border-r flex flex-col flex-shrink-0" style={{borderColor:"var(--line)"}}>
+      <div className="px-5 py-5 border-b flex items-center gap-2.5" style={{borderColor:"var(--line)"}}>
+        <div className="w-7 h-7 rounded-md grid place-items-center text-white font-semibold text-[13px]" style={{background:"var(--ink)"}}>P</div>
+        <div className="leading-tight">
+          <div className="text-[15px] font-semibold tracking-tight">PostFlow</div>
+          <div className="text-[11px]" style={{color:"var(--ink-mute)"}}>Publishing control</div>
+        </div>
+      </div>
+      <nav className="flex-1 px-3 py-3">
+        <div className="text-[10px] font-semibold uppercase tracking-wider px-2 pb-2" style={{color:"var(--ink-mute)"}}>Workspace</div>
+        <div className="flex flex-col gap-0.5">
+          {items.map(it => (
+            <button key={it.id} onClick={()=>setRoute(it.id)}
+              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors text-left ${route===it.id?"bg-gray-100 text-gray-900":"text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+              <span className="w-4 h-4 inline-grid place-items-center">{it.icon}</span>
+              {it.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+      <div className="px-3 py-3 border-t" style={{borderColor:"var(--line)"}}>
+        <div className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-[12px] ${connected?"bg-green-50 text-green-800":"bg-amber-50 text-amber-800"}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${connected?"bg-green-500":"bg-amber-500"} animate-pulse`}/>
+          <span className="font-medium">{connected?"Connected":"Not connected"}</span>
+          <span className="ml-auto text-[11px] opacity-70">{connected?"site.local":"setup"}</span>
+        </div>
+        <div className="flex items-center gap-2.5 px-1 pt-3">
+          <div className="w-7 h-7 rounded-full grid place-items-center text-white text-[11px] font-semibold" style={{background:"oklch(0.55 0.13 270)"}}>MC</div>
+          <div className="leading-tight">
+            <div className="text-[12px] font-medium">Maya Chen</div>
+            <div className="text-[10px]" style={{color:"var(--ink-mute)"}}>admin · single site</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function Topbar({title, subtitle, actions}){
+  return (
+    <header className="h-14 bg-white border-b flex items-center justify-between px-6 flex-shrink-0" style={{borderColor:"var(--line)"}}>
+      <div className="flex items-baseline gap-3 min-w-0">
+        <h1 className="text-[15px] font-semibold tracking-tight truncate">{title}</h1>
+        {subtitle && <div className="text-[12px] truncate" style={{color:"var(--ink-mute)"}}>{subtitle}</div>}
+      </div>
+      <div className="flex items-center gap-2">
+        {actions}
+        <div className="relative ml-2">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{color:"var(--ink-mute)"}}>{I.search}</span>
+          <input className="h-8 pl-8 pr-3 w-56 bg-gray-50 border rounded-md text-[12.5px] focus:outline-none focus:ring-2 focus:ring-gray-300 placeholder:text-gray-400" placeholder="Search…" style={{borderColor:"var(--line)"}}/>
+        </div>
+        <button className="h-8 w-8 grid place-items-center text-gray-500 hover:bg-gray-50 rounded-md relative">
+          <span className="w-4 h-4">{I.bell}</span>
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500"/>
+        </button>
+      </div>
+    </header>
+  );
+}
+
+/* ---------- Reusable bits ---------- */
+const Pill = ({status}) => {
+  const map = {
+    published:{bg:"bg-emerald-50", t:"text-emerald-700", b:"border-emerald-200", label:"Published", dot:"bg-emerald-500"},
+    scheduled:{bg:"bg-sky-50", t:"text-sky-700", b:"border-sky-200", label:"Scheduled", dot:"bg-sky-500"},
+    draft:{bg:"bg-gray-100", t:"text-gray-700", b:"border-gray-200", label:"Draft", dot:"bg-gray-400"},
+  };
+  const s = map[status] || map.draft;
+  return <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${s.bg} ${s.t} ${s.b}`}>
+    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`}/>{s.label}
+  </span>;
+};
+const Btn = ({children, kind="default", size="md", className="", icon, ...props}) => {
+  const sizes = { sm:"h-7 px-2.5 text-[12px]", md:"h-8 px-3 text-[12.5px]", lg:"h-9 px-4 text-[13px]" };
+  const kinds = {
+    primary:"bg-gray-900 text-white hover:bg-black border border-gray-900",
+    accent:"text-white hover:opacity-95 border",
+    default:"bg-white text-gray-800 hover:bg-gray-50 border border-gray-200",
+    ghost:"text-gray-600 hover:bg-gray-100 border border-transparent",
+    danger:"bg-red-50 text-red-700 hover:bg-red-100 border border-red-200",
+  };
+  const accentStyle = kind==="accent" ? {background:"var(--accent)", borderColor:"var(--accent)"} : null;
+  return <button {...props} style={accentStyle} className={`inline-flex items-center gap-1.5 rounded-md font-medium transition-colors ${sizes[size]} ${kinds[kind]} ${className}`}>
+    {icon && <span className="w-3.5 h-3.5 inline-grid place-items-center">{icon}</span>}{children}
+  </button>;
+};
+const Card = ({children, className="", style={}}) => (
+  <div className={`bg-white rounded-xl border shadow-sm ${className}`} style={{borderColor:"var(--line)", ...style}}>{children}</div>
+);
+
+/* ---------- Dashboard ---------- */
+function Dashboard({posts, setRoute}){
+  const drafts = posts.filter(p=>p.status==="draft").length;
+  const sched = posts.filter(p=>p.status==="scheduled").length;
+  const pub = posts.filter(p=>p.status==="published").length;
+  const upcoming = posts.filter(p=>p.status==="scheduled").sort((a,b)=>a.date.localeCompare(b.date));
+  const lowSeo = posts.filter(p=>p.seo<60);
+  const stats = [
+    {k:"Drafts", v:drafts, sub:"open in editor", c:"oklch(0.55 0.13 270)"},
+    {k:"Scheduled", v:sched, sub:"next 30 days", c:"var(--accent)"},
+    {k:"Published (30d)", v:pub, sub:"+18% vs prev", c:"var(--good)"},
+    {k:"Needs SEO", v:lowSeo.length, sub:"score < 60", c:"var(--warn)"},
+  ];
+
+  // tiny sparkline data
+  const spark = [3,4,2,5,6,4,7,5,8,6,9,7];
+
+  return (
+    <div className="max-w-[1200px] mx-auto p-6 space-y-6">
+      <div className="grid grid-cols-4 gap-4">
+        {stats.map(s => (
+          <Card key={s.k} className="p-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-[11px] font-medium uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>{s.k}</div>
+                <div className="text-[28px] font-semibold mt-1 tabular-nums tracking-tight">{s.v}</div>
+                <div className="text-[11px]" style={{color:"var(--ink-mute)"}}>{s.sub}</div>
+              </div>
+              <span className="w-2 h-10 rounded-full" style={{background:s.c}}/>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <Card className="col-span-2 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-[14px] font-semibold">Publishing rhythm</h2>
+              <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>Posts per week, last 12 weeks</div>
+            </div>
+            <div className="flex items-center gap-2 text-[11px]" style={{color:"var(--ink-mute)"}}>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500"/>published</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-sky-500"/>scheduled</span>
+            </div>
+          </div>
+          <div className="h-40 flex items-end gap-2">
+            {spark.map((v,i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full rounded-t-sm transition-all" style={{height:`${v*8}%`, minHeight:"6px", background:"oklch(0.6 0.13 150)"}}/>
+                <div className="w-full rounded-t-sm" style={{height:`${(spark[i]%4)*6}%`, minHeight:"3px", background:"oklch(0.7 0.12 250)"}}/>
+                <div className="text-[9px] mt-1" style={{color:"var(--ink-mute)"}}>W{i+1}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[14px] font-semibold">Upcoming</h2>
+            <button onClick={()=>setRoute("calendar")} className="text-[11.5px] font-medium hover:underline" style={{color:"var(--accent)"}}>Calendar →</button>
+          </div>
+          <div className="space-y-2">
+            {upcoming.slice(0,4).map(p => (
+              <div key={p.id} className="flex items-start gap-3 p-2.5 rounded-md hover:bg-gray-50 cursor-pointer">
+                <div className="text-center flex-shrink-0 w-9">
+                  <div className="text-[9px] uppercase font-semibold" style={{color:"var(--ink-mute)"}}>{["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][parseInt(p.date.slice(5,7))-1]}</div>
+                  <div className="text-[18px] font-semibold leading-none">{parseInt(p.date.slice(8,10))}</div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[12.5px] font-medium truncate">{p.title}</div>
+                  <div className="text-[11px] mt-0.5" style={{color:"var(--ink-mute)"}}>by {p.author}</div>
+                </div>
+                <Pill status={p.status}/>
+              </div>
+            ))}
+            {upcoming.length===0 && <div className="text-[12px] py-6 text-center" style={{color:"var(--ink-mute)"}}>No scheduled posts.</div>}
+          </div>
+        </Card>
+      </div>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-[14px] font-semibold">Activity feed</h2>
+            <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>What automations and humans did today</div>
+          </div>
+          <Btn kind="ghost" size="sm" icon={I.eye}>View all logs</Btn>
+        </div>
+        <ul className="text-[12.5px] divide-y" style={{borderColor:"var(--line-soft)"}}>
+          {[
+            {t:"Auto-tag rule applied", d:"Added Performance to “Compressing images with sharp”", w:"automation", time:"12 min ago"},
+            {t:"Yoast metadata generated", d:"Local LLM filled meta description for 3 drafts", w:"automation", time:"1 h ago"},
+            {t:"Post published", d:"“A 5-minute guide to schema.org for blogs” — by Tom Reyes", w:"human", time:"2 h ago"},
+            {t:"Bulk schedule", d:"4 posts queued across May 7–14", w:"human", time:"yesterday"},
+          ].map((row,i) => (
+            <li key={i} className="py-2.5 flex items-center gap-3">
+              <span className={`w-1.5 h-1.5 rounded-full ${row.w==="automation"?"bg-violet-500":"bg-gray-400"}`}/>
+              <div className="flex-1 min-w-0">
+                <span className="font-medium">{row.t}</span>
+                <span className="ml-2" style={{color:"var(--ink-mute)"}}>{row.d}</span>
+              </div>
+              <span className="text-[11px]" style={{color:"var(--ink-mute)"}}>{row.time}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
+/* ---------- Posts ---------- */
+function PostsPage({posts, setPosts, openEditor}){
+  const toast = useToast();
+  const [sel, setSel] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(null);
+
+  const visible = posts.filter(p => (filter==="all"||p.status===filter) && p.title.toLowerCase().includes(q.toLowerCase()));
+  const allSel = visible.length>0 && sel.length===visible.length;
+
+  const toggleAll = () => setSel(allSel? [] : visible.map(p=>p.id));
+  const toggle = id => setSel(s => s.includes(id) ? s.filter(x=>x!==id) : [...s, id]);
+
+  const bulkPublish = () => {
+    setPosts(ps => ps.map(p => sel.includes(p.id) ? {...p, status:"published", date:D.fmt(D.today(),"ymd")} : p));
+    toast(`Published ${sel.length} post${sel.length>1?"s":""}.`);
+    setSel([]);
+  };
+  const bulkSchedule = () => {
+    setPosts(ps => ps.map(p => sel.includes(p.id) ? {...p, status:"scheduled"} : p));
+    toast(`Scheduled ${sel.length} for May 14, 9:00 AM.`);
+    setSel([]);
+  };
+  const bulkAutoSeo = () => {
+    setBusy("bulk");
+    setTimeout(() => {
+      setPosts(ps => ps.map(p => sel.includes(p.id) ? {...p, seo: Math.max(p.seo, 80+Math.floor(Math.random()*15)), tags:[...new Set([...p.tags,"AI"])]} : p));
+      toast(`AI rewrote SEO for ${sel.length} drafts.`);
+      setSel([]); setBusy(null);
+    }, 1500);
+  };
+  const aiOne = (id) => {
+    setBusy(id);
+    setTimeout(() => {
+      setPosts(ps => ps.map(p => p.id===id ? {...p, seo: 88, tags:[...new Set([...p.tags,"AI"])], desc: p.desc || "Auto-generated meta description from local LLM."} : p));
+      setBusy(null);
+      toast("Meta + tags filled by Ollama.");
+    }, 1400);
+  };
+
+  return (
+    <div className="max-w-[1300px] mx-auto p-6 flex flex-col gap-4 h-full">
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>Library</div>
+          <h2 className="text-[20px] font-semibold tracking-tight">All posts</h2>
+        </div>
+        <Btn kind="primary" icon={I.plus}>New post</Btn>
+      </div>
+
+      <Card className="flex flex-col overflow-hidden flex-1">
+        <div className="px-4 py-3 border-b flex items-center justify-between" style={{borderColor:"var(--line)"}}>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{color:"var(--ink-mute)"}}>{I.search}</span>
+              <input value={q} onChange={e=>setQ(e.target.value)} className="h-8 pl-8 pr-3 w-60 bg-white border rounded-md text-[12.5px] focus:outline-none focus:ring-2 focus:ring-gray-200" placeholder="Search posts…" style={{borderColor:"var(--line)"}}/>
+            </div>
+            <div className="flex items-center bg-gray-100 rounded-md p-0.5 text-[12px]">
+              {["all","draft","scheduled","published"].map(s => (
+                <button key={s} onClick={()=>setFilter(s)} className={`px-2.5 h-7 rounded-[5px] capitalize font-medium transition-colors ${filter===s?"bg-white shadow-sm text-gray-900":"text-gray-600 hover:text-gray-900"}`}>{s}</button>
+              ))}
+            </div>
+            <Btn size="sm" kind="ghost" icon={I.filter}>Filters</Btn>
+          </div>
+          {sel.length>0 && (
+            <div className="flex items-center gap-1 px-1.5 py-1 rounded-md border" style={{borderColor:"var(--line)", background:"var(--accent-soft)"}}>
+              <span className="text-[12px] font-semibold px-2" style={{color:"var(--accent)"}}>{sel.length} selected</span>
+              <span className="w-px h-4" style={{background:"var(--line)"}}/>
+              <Btn size="sm" kind="ghost" icon={I.globe} onClick={bulkPublish}>Publish</Btn>
+              <Btn size="sm" kind="ghost" icon={I.cal} onClick={bulkSchedule}>Schedule</Btn>
+              <Btn size="sm" kind="ghost" icon={I.tag}>Tag</Btn>
+              <Btn size="sm" kind="ghost" icon={I.bot} onClick={bulkAutoSeo} disabled={busy==="bulk"}>{busy==="bulk"?"Working…":"Auto SEO"}</Btn>
+              <span className="w-px h-4" style={{background:"var(--line)"}}/>
+              <Btn size="sm" kind="ghost" className="text-red-600" icon={I.trash}>Delete</Btn>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <table className="min-w-full text-[13px]">
+            <thead className="bg-gray-50 sticky top-0 z-[1] border-b" style={{borderColor:"var(--line)"}}>
+              <tr className="text-left text-[11px] font-medium uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>
+                <th className="px-4 py-2.5 w-10"><Checkbox checked={allSel} onChange={toggleAll}/></th>
+                <th className="px-4 py-2.5">Title</th>
+                <th className="px-4 py-2.5 w-28">Status</th>
+                <th className="px-4 py-2.5 w-44">SEO</th>
+                <th className="px-4 py-2.5 w-52">Tags</th>
+                <th className="px-4 py-2.5 w-32">Date</th>
+                <th className="px-4 py-2.5 w-12"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y" style={{borderColor:"var(--line-soft)"}}>
+              {visible.map(p => (
+                <tr key={p.id} className={`group hover:bg-gray-50 transition-colors ${sel.includes(p.id)?"bg-blue-50/40":""}`}>
+                  <td className="px-4 py-3"><Checkbox checked={sel.includes(p.id)} onChange={()=>toggle(p.id)}/></td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      <button onClick={()=>openEditor(p.id)} className="font-medium text-left hover:underline truncate max-w-[420px]">{p.title}</button>
+                      <div className="text-[11.5px] flex items-center gap-2" style={{color:"var(--ink-mute)"}}>
+                        <span>by {p.author}</span>
+                        {p.status==="draft" && (
+                          <button onClick={()=>aiOne(p.id)} disabled={busy===p.id}
+                            className="inline-flex items-center gap-1 px-1.5 h-5 rounded text-[10px] font-bold" style={{background:"oklch(0.96 0.02 290)", color:"oklch(0.45 0.16 290)"}}>
+                            {busy===p.id ? <><span className="w-2 h-2 rounded-full border border-current border-t-transparent animate-spin"/>Working…</> : <><span className="w-3 h-3">{I.bot}</span>Auto SEO</>}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><Pill status={p.status}/></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-full rounded-full transition-[width] duration-700" style={{width:`${p.seo}%`, background: p.seo>=80?"var(--good)":p.seo>=60?"var(--warn)":"var(--bad)"}}/>
+                      </div>
+                      <span className="text-[11.5px] tabular-nums font-medium" style={{color:"var(--ink-soft)"}}>{p.seo}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {p.tags.map(t => (
+                        <span key={t} className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10.5px] font-medium border ${t==="AI"?"":""}`} style={t==="AI"?{background:"oklch(0.96 0.03 290)", color:"oklch(0.45 0.16 290)", borderColor:"oklch(0.9 0.04 290)"}:{background:"#f3f4f6", color:"#4b5563", borderColor:"#e5e7eb"}}>{t}</span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-[12px]" style={{color:"var(--ink-soft)"}}>{p.date}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={()=>openEditor(p.id)} className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-900"><span className="w-3.5 h-3.5">{I.edit}</span></button>
+                      <button className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-900"><span className="w-3.5 h-3.5">{I.more}</span></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {visible.length===0 && (
+                <tr><td colSpan={7} className="px-4 py-12 text-center text-[12.5px]" style={{color:"var(--ink-mute)"}}>No posts match.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-2.5 border-t flex items-center justify-between text-[12px]" style={{borderColor:"var(--line)", color:"var(--ink-mute)"}}>
+          <span>Showing {visible.length} of {posts.length} posts</span>
+          <div className="flex items-center gap-1">
+            <Btn size="sm" kind="ghost" icon={I.chL}>Prev</Btn>
+            <Btn size="sm" kind="ghost">Next <span className="w-3.5 h-3.5">{I.chR}</span></Btn>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+const Checkbox = ({checked, onChange}) => (
+  <button onClick={onChange} className={`w-4 h-4 rounded border grid place-items-center transition-colors ${checked?"":"bg-white hover:border-gray-400"}`} style={checked?{background:"var(--accent)", borderColor:"var(--accent)"}:{borderColor:"var(--line)"}}>
+    {checked && <span className="w-2.5 h-2.5 text-white">{I.check}</span>}
+  </button>
+);
+
+/* ---------- Editor (drawer) ---------- */
+function Editor({post, posts, setPosts, onClose}){
+  const toast = useToast();
+  const [tab, setTab] = useState("content");
+  const [draft, setDraft] = useState(post);
+  const [aiBusy, setAiBusy] = useState(false);
+
+  useEffect(()=>setDraft(post), [post]);
+
+  const save = (newStatus) => {
+    setPosts(ps => ps.map(p => p.id===draft.id ? {...draft, status:newStatus||draft.status} : p));
+    toast(newStatus==="published"?"Published.":newStatus==="scheduled"?"Scheduled.":"Draft saved.");
+    onClose();
+  };
+
+  const runAi = () => {
+    setAiBusy(true);
+    setTimeout(()=>{
+      setDraft(d => ({...d, focus:d.focus||"editorial calendar", desc:d.desc||"A practical look at editorial calendars and what makes them stick beyond the first month.", seo:88, tags:[...new Set([...d.tags,"AI"])]}));
+      setAiBusy(false);
+      toast("Local LLM filled SEO fields.");
+    }, 1500);
+  };
+
+  const seoChecks = [
+    {ok:draft.focus.length>0, t:"Focus keyword set"},
+    {ok:draft.desc.length>=120 && draft.desc.length<=160, t:`Meta description length (${draft.desc.length} chars, target 120–160)`},
+    {ok:draft.title.length>=30 && draft.title.length<=70, t:`Title length (${draft.title.length} chars, target 30–70)`},
+    {ok:draft.tags.length>=2, t:`At least 2 tags (${draft.tags.length})`},
+    {ok:draft.title.toLowerCase().includes(draft.focus.toLowerCase()) && draft.focus.length>0, t:"Focus keyword appears in title"},
+  ];
+  const seoPct = Math.round(seoChecks.filter(c=>c.ok).length / seoChecks.length * 100);
+
+  return (
+    <div className="fixed inset-0 z-40">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose}/>
+      <div className="absolute right-0 top-0 bottom-0 w-[760px] bg-white shadow-2xl flex flex-col animate-[slideR_.25s_ease]">
+        <style>{`@keyframes slideR{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
+        <div className="px-6 py-4 border-b flex items-center justify-between" style={{borderColor:"var(--line)"}}>
+          <div className="min-w-0">
+            <div className="text-[11px] font-semibold uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>Edit post · #{draft.id}</div>
+            <div className="text-[15px] font-semibold truncate">{draft.title}</div>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 grid place-items-center rounded-md hover:bg-gray-100"><span className="w-4 h-4">{I.x}</span></button>
+        </div>
+
+        <div className="px-6 pt-3 border-b flex gap-1" style={{borderColor:"var(--line)"}}>
+          {[
+            {id:"content", label:"Content"},
+            {id:"seo", label:"SEO"},
+            {id:"social", label:"Social"},
+          ].map(t => (
+            <button key={t.id} onClick={()=>setTab(t.id)} className={`px-3 py-2 text-[12.5px] font-medium border-b-2 -mb-px transition-colors ${tab===t.id?"text-gray-900":"text-gray-500 hover:text-gray-900 border-transparent"}`} style={tab===t.id?{borderColor:"var(--accent)"}:{}}>{t.label}</button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-auto p-6 space-y-5">
+          {tab==="content" && <>
+            <Field label="Title">
+              <input value={draft.title} onChange={e=>setDraft({...draft, title:e.target.value})} className="w-full px-3 py-2 border rounded-md text-[14px] focus:outline-none focus:ring-2 focus:ring-gray-300" style={{borderColor:"var(--line)"}}/>
+            </Field>
+            <Field label="URL slug">
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] px-2 py-1.5 rounded bg-gray-100 font-mono" style={{color:"var(--ink-mute)"}}>site.local/</span>
+                <input defaultValue={draft.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,50)} className="flex-1 px-3 py-2 border rounded-md text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-gray-300" style={{borderColor:"var(--line)"}}/>
+              </div>
+            </Field>
+            <Field label="Body">
+              <textarea rows={10} defaultValue={"Open the editor to write your post here. PostFlow keeps the draft in sync with WordPress and pushes the publish state through the REST API when you click Publish."} className="w-full px-3 py-2 border rounded-md text-[13px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-gray-300" style={{borderColor:"var(--line)"}}/>
+            </Field>
+            <Field label="Tags">
+              <div className="flex flex-wrap gap-1.5 p-2 border rounded-md min-h-9" style={{borderColor:"var(--line)"}}>
+                {draft.tags.map(t => (
+                  <span key={t} className="inline-flex items-center gap-1 px-1.5 h-6 rounded bg-gray-100 text-[11.5px] font-medium">
+                    {t}<button onClick={()=>setDraft({...draft, tags:draft.tags.filter(x=>x!==t)})} className="text-gray-400 hover:text-gray-700">×</button>
+                  </span>
+                ))}
+                <input placeholder="Add tag…" className="flex-1 min-w-[80px] outline-none text-[12px] px-1"/>
+              </div>
+            </Field>
+          </>}
+
+          {tab==="seo" && <>
+            <div className="rounded-xl p-5 border flex items-center gap-5" style={{borderColor:"var(--line)", background:"var(--accent-soft)"}}>
+              <div className="relative w-16 h-16">
+                <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="3"/>
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${seoPct*0.94} 100`} className="transition-[stroke-dasharray] duration-700"/>
+                </svg>
+                <div className="absolute inset-0 grid place-items-center text-[14px] font-semibold tabular-nums">{seoPct}</div>
+              </div>
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold">SEO score</div>
+                <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>{seoPct>=80?"Looking strong.":seoPct>=60?"Room to improve.":"Needs attention."}</div>
+              </div>
+              <Btn kind="accent" icon={I.bot} onClick={runAi} disabled={aiBusy}>{aiBusy?"Generating…":"Auto-fill with AI"}</Btn>
+            </div>
+
+            <Field label="Focus keyword">
+              <input value={draft.focus} onChange={e=>setDraft({...draft, focus:e.target.value})} placeholder="e.g. editorial calendar" className="w-full px-3 py-2 border rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-gray-300" style={{borderColor:"var(--line)"}}/>
+            </Field>
+            <Field label={`Meta description (${draft.desc.length}/160)`}>
+              <textarea value={draft.desc} onChange={e=>setDraft({...draft, desc:e.target.value})} rows={3} className="w-full px-3 py-2 border rounded-md text-[13px] focus:outline-none focus:ring-2 focus:ring-gray-300" style={{borderColor:"var(--line)"}}/>
+            </Field>
+
+            <div>
+              <div className="text-[12px] font-semibold mb-2">Search preview</div>
+              <div className="border rounded-md p-3.5 bg-gray-50/40" style={{borderColor:"var(--line)"}}>
+                <div className="text-[11.5px]" style={{color:"#1a73e8"}}>site.local › {draft.title.toLowerCase().split(" ").slice(0,3).join("-")}</div>
+                <div className="text-[15px] font-medium leading-snug" style={{color:"#1a0dab"}}>{draft.title}</div>
+                <div className="text-[12px] mt-0.5" style={{color:"#4d5156"}}>{draft.desc || "No meta description set."}</div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="text-[12px] font-semibold">Checks</div>
+              {seoChecks.map((c,i) => (
+                <div key={i} className="flex items-center gap-2 text-[12.5px] py-1">
+                  <span className={`w-4 h-4 rounded-full grid place-items-center ${c.ok?"bg-emerald-100 text-emerald-700":"bg-amber-100 text-amber-700"}`}>
+                    <span className="w-2.5 h-2.5">{c.ok?I.check:I.alert}</span>
+                  </span>
+                  <span style={{color:c.ok?"var(--ink-soft)":"var(--ink)"}}>{c.t}</span>
+                </div>
+              ))}
+            </div>
+          </>}
+
+          {tab==="social" && <>
+            <Field label="Open Graph title">
+              <input defaultValue={draft.title} className="w-full px-3 py-2 border rounded-md text-[13px]" style={{borderColor:"var(--line)"}}/>
+            </Field>
+            <Field label="Open Graph description">
+              <textarea rows={3} defaultValue={draft.desc} className="w-full px-3 py-2 border rounded-md text-[13px]" style={{borderColor:"var(--line)"}}/>
+            </Field>
+            <div className="rounded-md border overflow-hidden" style={{borderColor:"var(--line)"}}>
+              <div className="aspect-[1.91/1] bg-gradient-to-br from-gray-100 to-gray-200 grid place-items-center text-[11px]" style={{color:"var(--ink-mute)"}}>OG image preview · 1200×630</div>
+              <div className="p-3 border-t" style={{borderColor:"var(--line)"}}>
+                <div className="text-[11px] uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>site.local</div>
+                <div className="text-[13px] font-medium">{draft.title}</div>
+              </div>
+            </div>
+            <label className="flex items-center justify-between p-3 rounded-md border" style={{borderColor:"var(--line)"}}>
+              <div>
+                <div className="text-[13px] font-medium">Auto-share when published</div>
+                <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>Sends to configured webhook (optional)</div>
+              </div>
+              <Toggle on/>
+            </label>
+          </>}
+        </div>
+
+        <div className="px-6 py-3 border-t flex items-center justify-between" style={{borderColor:"var(--line)"}}>
+          <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>Last saved 2 min ago · auto-save on</div>
+          <div className="flex items-center gap-2">
+            <Btn onClick={()=>save("draft")}>Save draft</Btn>
+            <Btn icon={I.cal} onClick={()=>save("scheduled")}>Schedule</Btn>
+            <Btn kind="primary" icon={I.send} onClick={()=>save("published")}>Publish</Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+const Field = ({label, children}) => (
+  <div className="space-y-1.5">
+    <div className="text-[12px] font-semibold">{label}</div>
+    {children}
+  </div>
+);
+const Toggle = ({on, onChange}) => (
+  <button onClick={onChange} className={`relative w-9 h-5 rounded-full transition-colors`} style={{background: on ? "var(--accent)" : "#d4d4d8"}}>
+    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${on?"translate-x-4":"translate-x-0.5"}`}/>
+  </button>
+);
+
+/* ---------- Calendar ---------- */
+function Calendar({posts, setPosts, openEditor}){
+  const toast = useToast();
+  const [cur, setCur] = useState(D.today());
+  const [view, setView] = useState("month");
+  const [drag, setDrag] = useState(null);
+
+  const start = D.sow(D.som(cur));
+  const cells = Array.from({length:42}, (_,i) => D.add(start, i));
+
+  const onDrop = (date) => {
+    if(!drag) return;
+    const ymd = D.fmt(date,"ymd");
+    setPosts(ps => ps.map(p => p.id===drag ? {...p, date:ymd, status: p.status==="draft" ? "scheduled" : p.status} : p));
+    toast(`Rescheduled to ${ymd}.`);
+    setDrag(null);
+  };
+
+  return (
+    <div className="max-w-[1300px] mx-auto p-6 space-y-4 h-full flex flex-col">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>Editorial calendar</div>
+          <h2 className="text-[20px] font-semibold tracking-tight">{D.fmt(cur,"MMMM yyyy")}</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-gray-100 rounded-md p-0.5">
+            {["month","week","list"].map(v => (
+              <button key={v} onClick={()=>setView(v)} className={`px-3 h-7 text-[12px] font-medium rounded-[5px] capitalize ${view===v?"bg-white shadow-sm":"text-gray-600 hover:text-gray-900"}`}>{v}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
+            <Btn size="sm" kind="ghost" onClick={()=>setCur(D.addM(cur,-1))}><span className="w-3.5 h-3.5">{I.chL}</span></Btn>
+            <Btn size="sm" kind="default" onClick={()=>setCur(D.today())}>Today</Btn>
+            <Btn size="sm" kind="ghost" onClick={()=>setCur(D.addM(cur,1))}><span className="w-3.5 h-3.5">{I.chR}</span></Btn>
+          </div>
+          <Btn kind="primary" icon={I.plus}>Schedule post</Btn>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 text-[11.5px]" style={{color:"var(--ink-soft)"}}>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-400"/>Draft</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-sky-500"/>Scheduled</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500"/>Published</span>
+        <span className="ml-auto text-[11px]" style={{color:"var(--ink-mute)"}}>Drag a post to reschedule</span>
+      </div>
+
+      <Card className="overflow-hidden flex-1 flex flex-col">
+        <div className="grid grid-cols-7 border-b text-center text-[11px] font-semibold uppercase tracking-wider bg-gray-50/50" style={{borderColor:"var(--line)", color:"var(--ink-mute)"}}>
+          {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => <div key={d} className="py-2.5">{d}</div>)}
+        </div>
+        <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+          {cells.map((d, i) => {
+            const dayPosts = posts.filter(p => p.date===D.fmt(d,"ymd"));
+            const isToday = D.same(d, D.today());
+            const inMo = D.sameMo(d, cur);
+            return (
+              <div key={i}
+                onDragOver={e=>e.preventDefault()}
+                onDrop={()=>onDrop(d)}
+                className={`border-r border-b p-1.5 transition-colors ${inMo?"bg-white":"bg-gray-50/50"} ${drag?"hover:bg-blue-50":""}`}
+                style={{borderColor:"var(--line-soft)"}}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-[11px] font-medium w-5 h-5 grid place-items-center rounded-full ${isToday?"bg-gray-900 text-white":""}`} style={{color:!inMo?"var(--ink-mute)":!isToday?"var(--ink)":"#fff"}}>{D.fmt(d,"d")}</span>
+                  {dayPosts.length>0 && <span className="text-[9px] tabular-nums" style={{color:"var(--ink-mute)"}}>{dayPosts.length}</span>}
+                </div>
+                <div className="space-y-1">
+                  {dayPosts.map(p => {
+                    const c = p.status==="published"?{bg:"bg-emerald-50",b:"border-emerald-200",t:"text-emerald-800"}:p.status==="scheduled"?{bg:"bg-sky-50",b:"border-sky-200",t:"text-sky-800"}:{bg:"bg-gray-50",b:"border-gray-200",t:"text-gray-700"};
+                    return (
+                      <div key={p.id}
+                        draggable onDragStart={()=>setDrag(p.id)} onDragEnd={()=>setDrag(null)}
+                        onClick={()=>openEditor(p.id)}
+                        title={p.title}
+                        className={`text-[10.5px] px-1.5 py-1 rounded border cursor-grab active:cursor-grabbing truncate font-medium ${c.bg} ${c.b} ${c.t} hover:shadow-sm transition-shadow`}>
+                        {p.title}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ---------- Tags & Rules ---------- */
+function TagsPage(){
+  const [tab, setTab] = useState("rules");
+  const [rules, setRules] = useState([
+    { id:1, when:"title", op:"contains", val:"Tutorial", tag:"Tutorials", on:true, fired:42 },
+    { id:2, when:"content", op:"contains", val:"Yoast", tag:"SEO", on:true, fired:18 },
+    { id:3, when:"title", op:"contains", val:"Speed", tag:"Performance", on:false, fired:7 },
+  ]);
+  const tags = [
+    {n:"SEO", c:15, color:"oklch(0.55 0.13 250)"},
+    {n:"Tutorials", c:12, color:"oklch(0.6 0.13 150)"},
+    {n:"Infra", c:9, color:"oklch(0.55 0.13 30)"},
+    {n:"Development", c:7, color:"oklch(0.55 0.13 290)"},
+    {n:"Performance", c:5, color:"oklch(0.7 0.13 75)"},
+    {n:"Editorial", c:3, color:"oklch(0.55 0.06 240)"},
+  ];
+  const toast = useToast();
+
+  return (
+    <div className="max-w-[1100px] mx-auto p-6 space-y-4">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>Taxonomy</div>
+        <h2 className="text-[20px] font-semibold tracking-tight">Tags & rules</h2>
+      </div>
+
+      <div className="flex items-center bg-gray-100 rounded-md p-0.5 w-max">
+        {[{id:"tags",l:"Tags"},{id:"rules",l:"Auto-tag rules"},{id:"cats",l:"Categories"}].map(t => (
+          <button key={t.id} onClick={()=>setTab(t.id)} className={`px-3 h-7 text-[12px] font-medium rounded-[5px] ${tab===t.id?"bg-white shadow-sm":"text-gray-600 hover:text-gray-900"}`}>{t.l}</button>
+        ))}
+      </div>
+
+      {tab==="tags" && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[13px] font-semibold">{tags.length} tags</div>
+            <Btn kind="primary" size="sm" icon={I.plus}>New tag</Btn>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {tags.map(t => (
+              <div key={t.n} className="flex items-center justify-between p-3 rounded-md border hover:shadow-sm transition-shadow" style={{borderColor:"var(--line)"}}>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background:t.color}}/>
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-medium truncate">{t.n}</div>
+                    <div className="text-[11px]" style={{color:"var(--ink-mute)"}}>{t.c} posts · slug “{t.n.toLowerCase()}”</div>
+                  </div>
+                </div>
+                <button className="text-gray-400 hover:text-gray-700 p-1"><span className="w-3.5 h-3.5">{I.more}</span></button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {tab==="rules" && (
+        <Card>
+          <div className="px-5 py-4 border-b flex items-center justify-between" style={{borderColor:"var(--line)"}}>
+            <div>
+              <div className="text-[13px] font-semibold">Auto-tag engine</div>
+              <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>Rules run when a post is saved or published. They don't run retroactively.</div>
+            </div>
+            <Btn kind="primary" size="sm" icon={I.plus}>Add rule</Btn>
+          </div>
+          <div className="p-5 space-y-3">
+            {rules.map(r => (
+              <div key={r.id} className="p-3.5 border rounded-lg flex items-center gap-3" style={{borderColor:"var(--line)", background:r.on?"var(--accent-soft)":"transparent", borderColor:r.on?"oklch(0.9 0.04 250)":"var(--line)"}}>
+                <span className="w-7 h-7 rounded-md grid place-items-center flex-shrink-0" style={{background:r.on?"var(--accent)":"#e5e7eb", color:"#fff"}}><span className="w-3.5 h-3.5">{I.zap}</span></span>
+                <div className="flex-1 flex items-center flex-wrap gap-1.5 text-[12.5px]">
+                  <span style={{color:"var(--ink-mute)"}}>WHEN</span>
+                  <Chip>post.{r.when}</Chip>
+                  <Chip>{r.op}</Chip>
+                  <Chip mono>"{r.val}"</Chip>
+                  <span style={{color:"var(--ink-mute)"}}>THEN add tag</span>
+                  <Chip color="oklch(0.55 0.13 250)">{r.tag}</Chip>
+                </div>
+                <div className="text-[11px] tabular-nums" style={{color:"var(--ink-mute)"}}>{r.fired} runs</div>
+                <Toggle on={r.on} onChange={()=>setRules(rs => rs.map(x => x.id===r.id?{...x, on:!x.on}:x))}/>
+                <button className="text-gray-400 hover:text-red-600 p-1"><span className="w-3.5 h-3.5">{I.trash}</span></button>
+              </div>
+            ))}
+          </div>
+          <div className="px-5 py-3 border-t flex items-start gap-2.5 rounded-b-xl" style={{borderColor:"var(--line)", background:"oklch(0.97 0.04 80)"}}>
+            <span className="w-4 h-4 mt-0.5" style={{color:"oklch(0.55 0.15 75)"}}>{I.alert}</span>
+            <div className="text-[11.5px]" style={{color:"oklch(0.4 0.1 75)"}}>
+              <strong>Note:</strong> Rules apply on save/publish. To run them on existing posts, use <em>Bulk apply</em> from the Posts page.
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {tab==="cats" && (
+        <Card className="p-5">
+          <div className="text-[12.5px]" style={{color:"var(--ink-soft)"}}>Hierarchical categories — drag to reorder & nest.</div>
+          <div className="mt-3 font-mono text-[12.5px] leading-relaxed">
+            <Cat name="Technology" count={28}>
+              <Cat name="Web Development" count={14}>
+                <Cat name="React" count={6}/>
+                <Cat name="Node.js" count={4}/>
+              </Cat>
+              <Cat name="DevOps & Infra" count={9}/>
+            </Cat>
+            <Cat name="Editorial" count={8}>
+              <Cat name="Roundups" count={5}/>
+              <Cat name="Behind the Scenes" count={3}/>
+            </Cat>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+const Chip = ({children, mono, color}) => (
+  <span className={`inline-flex items-center px-1.5 h-5 rounded text-[11px] font-medium border bg-white ${mono?"font-mono":""}`} style={{borderColor:"var(--line)", color: color||"var(--ink)"}}>{children}</span>
+);
+function Cat({name, count, children}){
+  const [open, setOpen] = useState(true);
+  return (
+    <div>
+      <div className="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-50">
+        {children ? <button onClick={()=>setOpen(!open)} className={`w-3 transition-transform ${open?"rotate-0":"-rotate-90"}`}>{I.chD}</button> : <span className="w-3"/>}
+        <span className="w-3.5 h-3.5" style={{color:"var(--ink-mute)"}}>{I.tag}</span>
+        <span className="font-medium">{name}</span>
+        <span className="text-[11px] ml-1" style={{color:"var(--ink-mute)"}}>· {count}</span>
+        <div className="ml-auto opacity-0 group-hover:opacity-100"><span className="w-3.5 h-3.5">{I.more}</span></div>
+      </div>
+      {children && open && <div className="ml-4 border-l pl-2" style={{borderColor:"var(--line)"}}>{children}</div>}
+    </div>
+  );
+}
+
+/* ---------- Automations ---------- */
+function AutomationPage(){
+  const toast = useToast();
+  const [items, setItems] = useState([
+    { id:1, name:"Auto SEO from drafts", desc:"Local LLM fills Yoast metadata on draft save.", trigger:{i:I.draft, c:"oklch(0.96 0.02 290)", tc:"oklch(0.45 0.16 290)", t:"Draft saved"}, action:{i:I.bot, c:"oklch(0.96 0.02 290)", tc:"oklch(0.45 0.16 290)", t:"LLM: fill SEO"}, on:true, runs:142, saved:"~5m / post"},
+    { id:2, name:"Compress new uploads", desc:"Run script to convert PNGs to WebP before publish.", trigger:{i:I.upload, c:"oklch(0.96 0.04 80)", tc:"oklch(0.45 0.15 75)", t:"Media uploaded"}, action:{i:I.zap, c:"var(--accent-soft)", tc:"var(--accent)", t:"Run: optimize.py"}, on:true, runs:88, saved:"~2m / image"},
+    { id:3, name:"Publish & broadcast", desc:"Hit webhook on publish so other systems know.", trigger:{i:I.clock, c:"#f3f4f6", tc:"#4b5563", t:"Scheduled time"}, action:{i:I.send, c:"oklch(0.95 0.05 150)", tc:"oklch(0.45 0.15 150)", t:"POST webhook"}, on:false, runs:0, saved:"~10m / post"},
+    { id:4, name:"Stale draft nudge", desc:"After 7 days, move draft to Review and ping author.", trigger:{i:I.clock, c:"#f3f4f6", tc:"#4b5563", t:"7 days inactive"}, action:{i:I.bell, c:"oklch(0.96 0.04 30)", tc:"oklch(0.5 0.18 25)", t:"Notify + label"}, on:true, runs:5, saved:"editorial"},
+  ]);
+
+  return (
+    <div className="max-w-[1200px] mx-auto p-6 space-y-4">
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>Workflows</div>
+          <h2 className="text-[20px] font-semibold tracking-tight">Automations</h2>
+          <p className="text-[12.5px] mt-1 max-w-xl" style={{color:"var(--ink-mute)"}}>Connect site events to AI calls or shell scripts. Enable only what you need — keep the rest off.</p>
+        </div>
+        <Btn kind="primary" icon={I.plus}>New workflow</Btn>
+      </div>
+
+      <div className="space-y-3">
+        {items.map(w => (
+          <Card key={w.id} className={`overflow-hidden flex ${w.on?"":"opacity-70"}`}>
+            <div className="w-1.5" style={{background: w.on?"var(--accent)":"#d4d4d8"}}/>
+            <div className="p-5 w-72 flex flex-col gap-2 border-r" style={{borderColor:"var(--line)"}}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[13.5px] font-semibold">{w.name}</h3>
+                <Toggle on={w.on} onChange={()=>setItems(xs => xs.map(x=>x.id===w.id?{...x, on:!x.on}:x))}/>
+              </div>
+              <p className="text-[11.5px] leading-relaxed" style={{color:"var(--ink-mute)"}}>{w.desc}</p>
+              <div className="flex items-center gap-2 mt-auto pt-2 text-[10.5px]" style={{color:"var(--ink-mute)"}}>
+                <span className="px-1.5 h-5 rounded grid place-items-center font-bold tabular-nums" style={{background:"var(--good-soft)", color:"var(--good)"}}>{w.saved}</span>
+                <span>· {w.runs} runs</span>
+              </div>
+            </div>
+            <div className="flex-1 p-5 flex items-center gap-3 overflow-x-auto" style={{background:"oklch(0.99 0.002 260)"}}>
+              <Block label="When" {...w.trigger}/>
+              <div className="flex flex-col items-center text-gray-300">
+                <span className="w-5 h-5">{I.arr}</span>
+                <span className="text-[9px] uppercase font-bold tracking-widest">Then</span>
+              </div>
+              <Block label="Do" {...w.action}/>
+              <button className="w-9 h-9 rounded-full border-2 border-dashed grid place-items-center text-gray-400 hover:text-gray-700 hover:border-gray-400 transition-colors" style={{borderColor:"var(--line)"}}><span className="w-3.5 h-3.5">{I.plus}</span></button>
+            </div>
+            <div className="w-12 flex flex-col items-center justify-center gap-1 border-l" style={{borderColor:"var(--line)"}}>
+              <button className="w-8 h-8 rounded-md hover:bg-gray-100 grid place-items-center text-gray-500"><span className="w-3.5 h-3.5">{I.cog}</span></button>
+              <button onClick={()=>toast(`Test run: ${w.name}`)} className="w-8 h-8 rounded-md hover:bg-gray-100 grid place-items-center text-gray-500"><span className="w-3.5 h-3.5">{I.play}</span></button>
+              <button className="w-8 h-8 rounded-md hover:bg-gray-100 grid place-items-center text-gray-500"><span className="w-3.5 h-3.5">{I.more}</span></button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="p-5 border-dashed" style={{borderColor:"var(--line)", borderStyle:"dashed", background:"transparent", boxShadow:"none"}}>
+        <div className="text-[12px] font-semibold mb-2" style={{color:"var(--ink-soft)"}}>Templates</div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            {t:"RSS → Draft",d:"Fetch external feed, draft summary post."},
+            {t:"Translate on publish",d:"Pipe content through LLM, attach translations."},
+            {t:"Daily digest",d:"Compile published posts, email at 5pm."},
+          ].map((tpl,i)=>(
+            <button key={i} className="text-left p-3.5 bg-white rounded-md border hover:shadow-sm transition-shadow" style={{borderColor:"var(--line)"}}>
+              <div className="text-[12.5px] font-semibold">{tpl.t}</div>
+              <div className="text-[11px] mt-0.5" style={{color:"var(--ink-mute)"}}>{tpl.d}</div>
+              <div className="text-[10.5px] mt-2 font-medium" style={{color:"var(--accent)"}}>Use template →</div>
+            </button>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+const Block = ({i, c, tc, t, label}) => (
+  <div className="bg-white border rounded-xl px-4 py-3 w-44 flex flex-col gap-2 flex-shrink-0" style={{borderColor:"var(--line)"}}>
+    <div className="flex items-center gap-2">
+      <span className="w-7 h-7 rounded-md grid place-items-center" style={{background:c, color:tc}}><span className="w-3.5 h-3.5">{i}</span></span>
+      <span className="text-[9px] font-bold uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>{label}</span>
+    </div>
+    <div className="text-[12.5px] font-semibold leading-tight">{t}</div>
+  </div>
+);
+
+/* ---------- Settings ---------- */
+function SettingsPage({connected, setConnected, features, setFeatures}){
+  const toast = useToast();
+  const [tab, setTab] = useState("connection");
+  const [testing, setTesting] = useState(false);
+  const tabs = [
+    {id:"connection", icon:I.link, label:"Connection"},
+    {id:"ai", icon:I.bot, label:"AI & LLM"},
+    {id:"scripts", icon:I.copy, label:"Scripts"},
+    {id:"features", icon:I.sliders, label:"Features"},
+    {id:"roles", icon:I.shield, label:"Roles"},
+  ];
+
+  const test = () => {
+    setTesting(true);
+    setTimeout(()=>{ setConnected(true); setTesting(false); toast("Connected to site.local."); }, 1200);
+  };
+
+  return (
+    <div className="max-w-[1100px] mx-auto p-6 flex gap-6 h-full">
+      <aside className="w-56 flex-shrink-0">
+        <div className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{color:"var(--ink-mute)"}}>Settings</div>
+        <nav className="space-y-0.5">
+          {tabs.map(t => (
+            <button key={t.id} onClick={()=>setTab(t.id)} className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[12.5px] font-medium transition-colors text-left ${tab===t.id?"bg-gray-100 text-gray-900":"text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>
+              <span className="w-3.5 h-3.5">{t.icon}</span>{t.label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="flex-1 min-w-0 space-y-5 overflow-auto">
+        {tab==="connection" && <>
+          <SectionH title="Site connection" sub="REST API + application password. Keys are stored locally only."/>
+          <Card className="p-5 space-y-4">
+            <Field label="Site URL"><input defaultValue="https://blog.site.local" className="w-full px-3 py-2 border rounded-md text-[13px]" style={{borderColor:"var(--line)"}}/></Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Username"><input defaultValue="postflow" className="w-full px-3 py-2 border rounded-md text-[13px]" style={{borderColor:"var(--line)"}}/></Field>
+              <Field label="Application password"><input type="password" defaultValue="xxxx-xxxx-xxxx-xxxx" className="w-full px-3 py-2 border rounded-md text-[13px] font-mono" style={{borderColor:"var(--line)"}}/></Field>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>{connected?"Last successful sync 4 minutes ago.":"Not connected yet."}</div>
+              <div className="flex items-center gap-2">
+                <Btn icon={I.shield} onClick={test} disabled={testing}>{testing?"Testing…":"Test connection"}</Btn>
+                <Btn kind="primary">Save</Btn>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-5">
+            <div className="text-[12.5px] font-semibold mb-3">Endpoints in use</div>
+            <div className="grid grid-cols-2 gap-2 font-mono text-[11.5px]" style={{color:"var(--ink-soft)"}}>
+              {["/wp-json/wp/v2/posts","/wp-json/wp/v2/tags","/wp-json/wp/v2/categories","/wp-json/wp/v2/media","/wp-json/yoast/v1/get/post/:id","/wp-json/yoast/v1/update/post/:id"].map(e => (
+                <div key={e} className="flex items-center gap-2 px-2 py-1.5 rounded bg-gray-50"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/>{e}</div>
+              ))}
+            </div>
+          </Card>
+        </>}
+
+        {tab==="ai" && <>
+          <SectionH title="AI provider" sub="Use a local Ollama instance or any OpenAI-compatible endpoint."/>
+          <Card>
+            <div className="px-5 py-3.5 border-b flex items-center justify-between" style={{borderColor:"var(--line)"}}>
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4">{I.bot}</span>
+                <span className="text-[13px] font-semibold">Model configuration</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1.5" style={{background:"var(--good-soft)", color:"var(--good)"}}><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>Connected</span>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Endpoint URL"><input defaultValue="http://localhost:11434/api/generate" className="w-full px-3 py-2 border rounded-md text-[12.5px] font-mono" style={{borderColor:"var(--line)"}}/></Field>
+                <Field label="Model">
+                  <select className="w-full px-3 py-2 border rounded-md text-[13px]" style={{borderColor:"var(--line)"}}>
+                    <option>llama3.1:8b</option><option>mistral:7b</option><option>phi3</option><option>OpenAI: gpt-4o-mini (compatible)</option>
+                  </select>
+                </Field>
+              </div>
+              <Field label="System prompt">
+                <textarea rows={4} defaultValue="You write SEO metadata for a tech blog. Given a draft, return JSON with: title (max 60 chars), meta_description (130–160 chars), focus_keyword, and 3–5 tags." className="w-full px-3 py-2 border rounded-md text-[12.5px] font-mono leading-relaxed" style={{borderColor:"var(--line)"}}/>
+              </Field>
+              <div className="grid grid-cols-3 gap-4">
+                <Field label="Temperature"><Slider value={0.4}/></Field>
+                <Field label="Max tokens"><input defaultValue="600" className="w-full px-3 py-2 border rounded-md text-[12.5px]" style={{borderColor:"var(--line)"}}/></Field>
+                <Field label="Timeout (s)"><input defaultValue="20" className="w-full px-3 py-2 border rounded-md text-[12.5px]" style={{borderColor:"var(--line)"}}/></Field>
+              </div>
+            </div>
+          </Card>
+        </>}
+
+        {tab==="scripts" && <>
+          <SectionH title="Background scripts" sub="Drop in Python or Node scripts the automation engine can run."/>
+          <div className="rounded-xl border-2 border-dashed p-6 text-center cursor-pointer hover:bg-gray-50 transition-colors" style={{borderColor:"var(--line)"}}>
+            <div className="w-10 h-10 rounded-full bg-white border shadow-sm grid place-items-center mx-auto mb-2" style={{borderColor:"var(--line)"}}><span className="w-4 h-4">{I.upload}</span></div>
+            <div className="text-[13px] font-semibold">Drop a .py or .js file</div>
+            <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>or click to browse — runs in a sandboxed worker</div>
+          </div>
+          <div className="space-y-2">
+            {[
+              {n:"optimize_images.py", d:"Compress + convert PNG → WebP before media upload finishes", st:"running"},
+              {n:"fetch_news_rss.py", d:"Pull RSS daily, draft summaries via LLM", st:"stopped"},
+              {n:"sync_categories.js", d:"Mirror category tree to a static export", st:"running"},
+            ].map((s,i) => (
+              <Card key={i} className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className={`w-8 h-8 rounded-md grid place-items-center flex-shrink-0 ${s.st==="running"?"bg-emerald-50 text-emerald-600":"bg-gray-100 text-gray-500"}`}><span className="w-4 h-4">{I.copy}</span></span>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[12.5px] font-semibold truncate">{s.n}</div>
+                    <div className="text-[11px] truncate" style={{color:"var(--ink-mute)"}}>{s.d}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-medium ${s.st==="running"?"bg-emerald-50 text-emerald-700":"bg-gray-100 text-gray-600"}`}>{s.st}</span>
+                  <button className={`p-1.5 rounded-md ${s.st==="running"?"text-red-600 hover:bg-red-50":"text-emerald-600 hover:bg-emerald-50"}`}><span className="w-4 h-4">{s.st==="running"?I.power:I.play}</span></button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </>}
+
+        {tab==="features" && <>
+          <SectionH title="Features" sub="Turn things off you don't use. The UI gets simpler."/>
+          <Card className="p-2 divide-y" style={{borderColor:"var(--line-soft)"}}>
+            {[
+              {k:"seo", t:"Yoast / SEO editor", d:"Show focus keyword, meta description and live checks."},
+              {k:"social", t:"Social sharing", d:"Auto-post to webhook (X / LinkedIn / Mastodon) on publish."},
+              {k:"ai", t:"AI assistance", d:"Buttons for Auto SEO, draft rewrite, alt-text generation."},
+              {k:"calendar", t:"Calendar view", d:"Editorial calendar with drag-to-reschedule."},
+              {k:"bulk", t:"Bulk publishing", d:"Multi-select toolbar in the posts list."},
+              {k:"recurring", t:"Recurring posts", d:"Re-publish weekly digest content automatically."},
+            ].map(f => (
+              <label key={f.k} className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 rounded-md">
+                <div className="min-w-0">
+                  <div className="text-[13px] font-semibold">{f.t}</div>
+                  <div className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>{f.d}</div>
+                </div>
+                <Toggle on={features[f.k]} onChange={()=>setFeatures(x=>({...x, [f.k]:!x[f.k]}))}/>
+              </label>
+            ))}
+          </Card>
+          <div className="text-[11.5px] flex items-start gap-2 p-3 rounded-md" style={{background:"var(--accent-soft)", color:"oklch(0.35 0.1 250)"}}>
+            <span className="w-3.5 h-3.5 mt-0.5">{I.alert}</span>
+            <span>Disabled features stay configurable here — toggling them back on restores the saved state. No data is wiped.</span>
+          </div>
+        </>}
+
+        {tab==="roles" && <>
+          <SectionH title="User roles" sub="Map workspace roles to WordPress capabilities."/>
+          <Card>
+            <table className="w-full text-[12.5px]">
+              <thead className="bg-gray-50 text-left text-[11px] uppercase tracking-wider" style={{color:"var(--ink-mute)"}}>
+                <tr><th className="px-4 py-2.5">Role</th><th className="px-4 py-2.5 text-center">Edit</th><th className="px-4 py-2.5 text-center">Publish</th><th className="px-4 py-2.5 text-center">Schedule</th><th className="px-4 py-2.5 text-center">Manage rules</th><th className="px-4 py-2.5 text-center">Settings</th></tr>
+              </thead>
+              <tbody className="divide-y" style={{borderColor:"var(--line-soft)"}}>
+                {[
+                  {r:"Admin", p:[1,1,1,1,1]},
+                  {r:"Editor", p:[1,1,1,1,0]},
+                  {r:"Author", p:[1,0,0,0,0]},
+                  {r:"Contributor", p:[1,0,0,0,0]},
+                ].map(row => (
+                  <tr key={row.r} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">{row.r}</td>
+                    {row.p.map((v,i) => (
+                      <td key={i} className="px-4 py-3 text-center">
+                        <span className={`inline-grid place-items-center w-5 h-5 rounded ${v?"bg-emerald-50 text-emerald-600":"bg-gray-100 text-gray-400"}`}><span className="w-3 h-3">{v?I.check:I.x}</span></span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>}
+
+        <div className="flex justify-end pt-4">
+          <Btn kind="primary" icon={I.check}>Save {tabs.find(t=>t.id===tab)?.label.toLowerCase()}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+const SectionH = ({title, sub}) => (
+  <div>
+    <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+    <p className="text-[11.5px]" style={{color:"var(--ink-mute)"}}>{sub}</p>
+  </div>
+);
+const Slider = ({value=0.4}) => (
+  <div className="flex items-center gap-2 h-9 px-1">
+    <div className="relative flex-1 h-1.5 rounded-full bg-gray-200">
+      <div className="absolute h-full rounded-full" style={{width:`${value*100}%`, background:"var(--accent)"}}/>
+      <div className="absolute -top-1 w-3.5 h-3.5 rounded-full bg-white border-2 shadow" style={{left:`calc(${value*100}% - 7px)`, borderColor:"var(--accent)"}}/>
+    </div>
+    <span className="text-[11.5px] tabular-nums w-7 text-right" style={{color:"var(--ink-soft)"}}>{value.toFixed(2)}</span>
+  </div>
+);
+
+/* ---------- App shell ---------- */
+function App(){
+  const [route, setRoute] = useState("dash");
+  const [posts, setPosts] = useState(initialPosts);
+  const [editorId, setEditorId] = useState(null);
+  const [connected, setConnected] = useState(true);
+  const [features, setFeatures] = useState({seo:true, social:false, ai:true, calendar:true, bulk:true, recurring:false});
+
+  const titles = {
+    dash:{t:"Dashboard", s:"Today, May 5 · Single site · 24 posts"},
+    posts:{t:"Posts", s:`${posts.length} posts · ${posts.filter(p=>p.status==="draft").length} drafts open`},
+    calendar:{t:"Calendar", s:"Drag posts to reschedule"},
+    tags:{t:"Tags", s:"Taxonomy & auto-tag rules"},
+    automation:{t:"Automations", s:"4 workflows · 3 active"},
+    settings:{t:"Settings", s:"Connection, AI, features"},
+  };
+
+  const editorPost = posts.find(p => p.id===editorId);
+
+  return (
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar route={route} setRoute={setRoute} connected={connected}/>
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Topbar title={titles[route].t} subtitle={titles[route].s}
+          actions={route==="posts" ? <Btn size="md" kind="accent" icon={I.plus}>New post</Btn> : null}/>
+        <div className="flex-1 overflow-auto">
+          {route==="dash" && <Dashboard posts={posts} setRoute={setRoute}/>}
+          {route==="posts" && <PostsPage posts={posts} setPosts={setPosts} openEditor={setEditorId}/>}
+          {route==="calendar" && <Calendar posts={posts} setPosts={setPosts} openEditor={setEditorId}/>}
+          {route==="tags" && <TagsPage/>}
+          {route==="automation" && <AutomationPage/>}
+          {route==="settings" && <SettingsPage connected={connected} setConnected={setConnected} features={features} setFeatures={setFeatures}/>}
+        </div>
+      </main>
+      {editorPost && <Editor post={editorPost} posts={posts} setPosts={setPosts} onClose={()=>setEditorId(null)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<ToastProvider><App/></ToastProvider>);
+</script>
+</body>
+</html>

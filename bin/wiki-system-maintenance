@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+"""
+Comprehensive system maintenance & disk recovery for wiki-linux.
+Safe, surgical removal of garbage, caches, and artifacts.
+ETA: ~30-60 seconds depending on disk state.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Optional
+
+HOME = Path.home()
+WIKI_ROOT = HOME / "wiki"
+WIKI_LINUX_REPO = HOME / "Documents" / "wiki-linux" / "wiki-linux"
+LOG_DIR = Path("/var/log/wiki-linux") if (Path("/var/log/wiki-linux").exists() and os.access("/var/log/wiki-linux", os.W_OK)) else HOME / ".local" / "var" / "log" / "wiki-linux"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s] %(levelname)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class MaintenanceStats:
+    """Track maintenance results."""
+    files_removed: int = 0
+    cache_cleaned_mb: int = 0
+    git_cleaned_mb: int = 0
+    partial_blobs_mb: int = 0
+    tmp_cleaned_mb: int = 0
+    errors: list[str] = None
+    duration_sec: float = 0.0
+    space_recovered_mb: int = 0
+
+    def __post_init__(self):
+        if self.errors is None:
+            self.errors = []
+
+    def to_dict(self):
+        return asdict(self)
+
+
+def safe_remove_file(path: Path) -> int:
+    """Safely remove file. Returns size in bytes if successful."""
+    try:
+        if path.exists():
+            size = path.stat().st_size
+            path.unlink()
+            return size
+        return 0
+    except Exception as e:
+        logger.debug(f"Failed to remove {path}: {e}")
+        return 0
+
+
+def safe_remove_dir(path: Path) -> int:
+    """Safely remove directory tree. Returns size in bytes if successful."""
+    try:
+        if path.exists():
+            total = 0
+            for item in path.rglob("*"):
+                if item.is_file():
+                    total += item.stat().st_size
+            shutil.rmtree(path, ignore_errors=True)
+            return total
+        return 0
+    except Exception as e:
+        logger.debug(f"Failed to remove {path}: {e}")
+        return 0
+
+
+def remove_python_cache(root: Path) -> int:
+    """Remove Python bytecode and cache directories."""
+    total = 0
+    
+    # __pycache__ directories
+    for cache_dir in root.rglob("__pycache__"):
+        total += safe_remove_dir(cache_dir)
+    
+    # .pyc, .pyo, .pyd files
+    for pattern in ("*.pyc", "*.pyo", "*.pyd"):
+        for f in root.rglob(pattern):
+            total += safe_remove_file(f)
+    
+    return total
+
+
+def remove_old_tmp_files(root: Path, older_than_hours: int = 24) -> int:
+    """Remove temporary and backup files older than threshold."""
+    cutoff = time.time() - (older_than_hours * 3600)
+    total = 0
+    
+    patterns = ("*.tmp", "*.bak", "*~", "*.swp", "*.o", "*.a")
+    for pattern in patterns:
+        for f in root.rglob(pattern):
+            try:
+                if f.is_file() and f.stat().st_mtime < cutoff:
+                    total += safe_remove_file(f)
+            except OSError:
+                continue
+    
+    return total
+
+
+def remove_partial_ollama_blobs() -> int:
+    """Remove incomplete Ollama model downloads."""
+    blobs_dir = HOME / ".ollama" / "models" / "blobs"
+    total = 0
+    
+    if not blobs_dir.exists():
+        return 0
+    
+    for f in blobs_dir.glob("*-partial"):
+        size = f.stat().st_size if f.exists() else 0
+        if safe_remove_file(f) > 0:
+            total += size
+            logger.info(f"Removed partial blob: {f.name} ({size / 1024 / 1024:.1f}MB)")
+    
+    return total
+
+
+def clean_cache_directory(cache_dir: Path, older_than_days: int = 14) -> int:
+    """Remove old cache files."""
+    if not cache_dir.exists():
+        return 0
+    
+    cutoff = time.time() - (older_than_days * 86400)
+    total = 0
+    removed_count = 0
+    
+    for f in cache_dir.rglob("*"):
+        try:
+            if f.is_file() and f.stat().st_mtime < cutoff:
+                size = f.stat().st_size
+                if safe_remove_file(f) > 0:
+                    total += size
+                    removed_count += 1
+        except OSError:
+            continue
+    
+    if removed_count > 0:
+        logger.info(f"Cleaned {cache_dir.name}: {removed_count} files, {total / 1024 / 1024:.1f}MB")
+    
+    return total
+
+
+def git_gc_and_prune(repo_path: Path) -> int:
+    """Run git garbage collection and prune."""
+    if not (repo_path / ".git").exists():
+        return 0
+    
+    try:
+        before_mb = sum(f.stat().st_size for f in (repo_path / ".git").rglob("*") if f.is_file()) / 1024 / 1024
+        
+        subprocess.run(
+            ["git", "gc", "--aggressive"],
+            cwd=repo_path,
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+        
+        after_mb = sum(f.stat().st_size for f in (repo_path / ".git").rglob("*") if f.is_file()) / 1024 / 1024
+        freed = max(0, before_mb - after_mb)
+        
+        if freed > 1:
+            logger.info(f"Git GC ({repo_path.name}): freed {freed:.1f}MB")
+        
+        return int(freed * 1024 * 1024)
+    except Exception as e:
+        logger.debug(f"Git GC failed for {repo_path}: {e}")
+        return 0
+
+
+def check_openwebui_status() -> dict:
+    """Check if OpenWebUI is running and its resource usage."""
+    try:
+        result = subprocess.run(
+            ["ps", "aux"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        
+        webui_procs = [line for line in result.stdout.split("\n") if "open-webui" in line.lower() or "webui" in line.lower()]
+        
+        return {
+            "running": len(webui_procs) > 0,
+            "processes": len(webui_procs),
+            "ports": check_open_ports(),
+        }
+    except Exception as e:
+        logger.debug(f"OpenWebUI check failed: {e}")
+        return {"running": False, "error": str(e)}
+
+
+def check_open_ports() -> list[dict]:
+    """Check if web ports are listening."""
+    ports_to_check = [8080, 11434, 3000]
+    open_ports = []
+    
+    try:
+        result = subprocess.run(
+            ["ss", "-tlnp"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        
+        for port in ports_to_check:
+            if f":{port}" in result.stdout:
+                open_ports.append({"port": port, "status": "listening"})
+    except Exception:
+        pass
+    
+    return open_ports
+
+
+def check_disk_space() -> dict:
+    """Get current disk space status."""
+    try:
+        result = subprocess.run(
+            ["df", "-B1", "/"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        
+        lines = result.stdout.strip().split("\n")
+        if len(lines) >= 2:
+            parts = lines[1].split()
+            total = int(parts[1])
+            used = int(parts[2])
+            available = int(parts[3])
+            percent = (used / total) * 100 if total > 0 else 0
+            
+            return {
+                "total_gb": round(total / 1024 / 1024 / 1024, 1),
+                "used_gb": round(used / 1024 / 1024 / 1024, 1),
+                "available_gb": round(available / 1024 / 1024 / 1024, 1),
+                "percent_used": round(percent, 1),
+            }
+    except Exception as e:
+        logger.error(f"Disk space check failed: {e}")
+    
+    return {}
+
+
+def main() -> int:
+    """Execute all maintenance tasks."""
+    start_time = time.time()
+    stats = MaintenanceStats()
+    
+    logger.info("=== Wiki-Linux System Maintenance Started ===")
+    logger.info(f"Free space before: {check_disk_space().get('available_gb', '?')}GB")
+    
+    try:
+        # 1. Clean Python bytecode in WIKI_LINUX_REPO
+        logger.info("Cleaning Python cache...")
+        cache_mb = remove_python_cache(WIKI_LINUX_REPO) / 1024 / 1024
+        stats.cache_cleaned_mb = int(cache_mb)
+        
+        # 2. Clean temporary files in WIKI_LINUX_REPO
+        logger.info("Removing old temp files...")
+        tmp_mb = remove_old_tmp_files(WIKI_LINUX_REPO, older_than_hours=24) / 1024 / 1024
+        stats.tmp_cleaned_mb = int(tmp_mb)
+        
+        # 3. Remove partial Ollama blobs
+        logger.info("Cleaning partial Ollama downloads...")
+        partial_mb = remove_partial_ollama_blobs() / 1024 / 1024
+        stats.partial_blobs_mb = int(partial_mb)
+        
+        # 4. Clean old cache files
+        logger.info("Cleaning cache directories...")
+        cache1_mb = clean_cache_directory(HOME / ".cache", older_than_days=14) / 1024 / 1024
+        stats.cache_cleaned_mb += int(cache1_mb)
+        
+        if (HOME / ".config" / "Code - OSS" / "CachedData").exists():
+            cache2_mb = clean_cache_directory(HOME / ".config" / "Code - OSS" / "CachedData", older_than_days=7) / 1024 / 1024
+            stats.cache_cleaned_mb += int(cache2_mb)
+        
+        # 5. Git cleanup in wiki repo
+        if WIKI_ROOT.exists() and (WIKI_ROOT / ".git").exists():
+            logger.info("Optimizing wiki Git repository...")
+            git_mb = git_gc_and_prune(WIKI_ROOT) / 1024 / 1024
+            stats.git_cleaned_mb = int(git_mb)
+        
+        # 6. Check OpenWebUI status
+        logger.info("Checking OpenWebUI status...")
+        webui_status = check_openwebui_status()
+        if webui_status.get("running"):
+            logger.info(f"OpenWebUI: running ({webui_status.get('processes')} processes)")
+        else:
+            logger.info("OpenWebUI: not running")
+        
+        stats.space_recovered_mb = stats.cache_cleaned_mb + stats.git_cleaned_mb + stats.partial_blobs_mb + stats.tmp_cleaned_mb
+        
+    except Exception as e:
+        logger.error(f"Maintenance error: {e}")
+        stats.errors.append(str(e))
+        return 1
+    finally:
+        stats.duration_sec = time.time() - start_time
+        
+        # Report final status
+        disk_after = check_disk_space()
+        logger.info("=== Maintenance Complete ===")
+        logger.info(f"Duration: {stats.duration_sec:.1f}s")
+        logger.info(f"Space recovered: {stats.space_recovered_mb}MB")
+        logger.info(f"Free space after: {disk_after.get('available_gb', '?')}GB ({disk_after.get('percent_used', '?')}% used)")
+        
+        # Save report
+        try:
+            report_file = LOG_DIR / f"maintenance-{int(time.time())}.json"
+            with open(report_file, "w") as f:
+                json.dump(
+                    {
+                        "timestamp": time.time(),
+                        "stats": stats.to_dict(),
+                        "disk": disk_after,
+                        "webui": webui_status,
+                    },
+                    f,
+                    indent=2,
+                )
+            logger.info(f"Report saved: {report_file}")
+        except Exception as e:
+            logger.warning(f"Failed to save report: {e}")
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

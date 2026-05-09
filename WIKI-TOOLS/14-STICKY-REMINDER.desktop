@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=📝 Sticky Reminder
+Comment=Show sticky note reminders on desktop
+Exec=/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-sticky-reminder
+Icon=accessories-calendar
+Terminal=true
+Type=Application
+Categories=Utility;Office;
+Keywords=reminder;sticky;note;desktop;
+StartupNotify=true

@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""
+Ollama Model Optimization Tool
+- List installed models with sizes
+- Remove unused/duplicate models
+- Show model duplication between ~/.ollama and /var/lib/ollama
+- Recommendations for smaller models
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+HOME = Path.home()
+OLLAMA_HOME = HOME / ".ollama"
+OLLAMA_SYSTEM = Path("/var/lib/ollama")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class OllamaModel:
+    name: str
+    size_mb: int
+    location: str
+    status: str = "available"
+
+
+def get_ollama_models() -> list[OllamaModel]:
+    """Fetch Ollama models using ollama list command."""
+    models = []
+    try:
+        result = subprocess.run(
+            ["ollama", "list"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        
+        if result.returncode == 0:
+            lines = result.stdout.strip().split("\n")[1:]  # Skip header
+            for line in lines:
+                if not line.strip():
+                    continue
+                parts = line.split()
+                if len(parts) >= 2:
+                    name = parts[0]
+                    size_str = parts[1]
+                    
+                    # Parse size
+                    size_mb = 0
+                    if "GB" in size_str:
+                        size_mb = int(float(size_str.replace("GB", "")) * 1024)
+                    elif "MB" in size_str:
+                        size_mb = int(float(size_str.replace("MB", "")))
+                    
+                    location = "~/.ollama" if (OLLAMA_HOME / "models" / "manifests" / "registry.ollama.ai" / name).exists() else "/var/lib/ollama"
+                    
+                    models.append(OllamaModel(
+                        name=name,
+                        size_mb=size_mb,
+                        location=location,
+                    ))
+    except Exception as e:
+        logger.error(f"Failed to fetch Ollama models: {e}")
+    
+    return models
+
+
+def check_model_duplication() -> dict:
+    """Check for duplicate models across locations."""
+    home_models = set()
+    system_models = set()
+    
+    if (OLLAMA_HOME / "models" / "manifests").exists():
+        for model_dir in (OLLAMA_HOME / "models" / "manifests" / "registry.ollama.ai").rglob("*"):
+            if model_dir.is_dir() and model_dir.name != "registry.ollama.ai":
+                home_models.add(model_dir.name)
+    
+    if (OLLAMA_SYSTEM / "models" / "manifests").exists():
+        for model_dir in (OLLAMA_SYSTEM / "models" / "manifests" / "registry.ollama.ai").rglob("*"):
+            if model_dir.is_dir() and model_dir.name != "registry.ollama.ai":
+                system_models.add(model_dir.name)
+    
+    return {
+        "home_only": len(home_models),
+        "system_only": len(system_models),
+        "duplicates": len(home_models & system_models),
+        "duplicate_names": list(home_models & system_models),
+    }
+
+
+def calculate_directory_size(path: Path) -> int:
+    """Calculate directory size in MB."""
+    try:
+        total = 0
+        for item in path.rglob("*"):
+            if item.is_file():
+                total += item.stat().st_size
+        return total // (1024 * 1024)
+    except Exception:
+        return 0
+
+
+def get_storage_locations_summary() -> dict:
+    """Get summary of storage locations."""
+    summary = {}
+    
+    if OLLAMA_HOME.exists():
+        summary["~/.ollama"] = calculate_directory_size(OLLAMA_HOME)
+    
+    if OLLAMA_SYSTEM.exists():
+        summary["/var/lib/ollama"] = calculate_directory_size(OLLAMA_SYSTEM)
+    
+    return summary
+
+
+def recommend_smaller_models() -> list[dict]:
+    """Recommend smaller models for common tasks."""
+    recommendations = [
+        {
+            "task": "Health checks / maintenance analysis",
+            "model": "tinyllama",
+            "size_mb": 637,
+            "why": "Fast, lightweight, perfect for system tasks",
+        },
+        {
+            "task": "Code generation / debugging",
+            "model": "deepseek-coder:6.7b",
+            "size_mb": 4100,
+            "why": "Specialized for code, smaller than larger LLMs",
+        },
+        {
+            "task": "Text summarization",
+            "model": "phi3",
+            "size_mb": 2200,
+            "why": "Fast, efficient for NLP tasks",
+        },
+        {
+            "task": "Chat / general purpose",
+            "model": "neural-chat",
+            "size_mb": 4900,
+            "why": "Balanced performance and size",
+        },
+        {
+            "task": "Semantic search / embeddings",
+            "model": "nomic-embed-text",
+            "size_mb": 274,
+            "why": "Specialized embeddings model, very small",
+        },
+    ]
+    return recommendations
+
+
+def main() -> int:
+    """Main analysis."""
+    logger.info("=== Ollama Model Analysis ===\n")
+    
+    # 1. List models
+    logger.info("📦 Currently Installed Models:")
+    models = get_ollama_models()
+    total_size = 0
+    
+    for model in models:
+        logger.info(f"  • {model.name}: {model.size_mb}MB ({model.location})")
+        total_size += model.size_mb
+    
+    if models:
+        logger.info(f"\n  Total: {total_size}MB ({total_size / 1024:.1f}GB)\n")
+    else:
+        logger.info("  (No models found)\n")
+    
+    # 2. Check duplication
+    logger.info("🔄 Storage Duplication Check:")
+    duplication = check_model_duplication()
+    logger.info(f"  • Models in ~/.ollama only: {duplication['home_only']}")
+    logger.info(f"  • Models in /var/lib/ollama only: {duplication['system_only']}")
+    logger.info(f"  • Models in both locations: {duplication['duplicates']}")
+    
+    if duplication['duplicate_names']:
+        logger.info(f"    Duplicates: {', '.join(duplication['duplicate_names'][:3])}")
+        if len(duplication['duplicate_names']) > 3:
+            logger.info(f"    ... and {len(duplication['duplicate_names']) - 3} more")
+    logger.info("")
+    
+    # 3. Storage summary
+    logger.info("💾 Storage Locations:")
+    storage = get_storage_locations_summary()
+    for location, size_mb in storage.items():
+        logger.info(f"  • {location}: {size_mb}MB ({size_mb / 1024:.1f}GB)")
+    logger.info("")
+    
+    # 4. Recommendations
+    logger.info("💡 Recommendations for Maintenance Tasks:")
+    for rec in recommend_smaller_models():
+        logger.info(f"  • {rec['task']}")
+        logger.info(f"    → {rec['model']} ({rec['size_mb']}MB)")
+        logger.info(f"    → {rec['why']}")
+        logger.info("")
+    
+    logger.info("🔧 To optimize:")
+    logger.info("  1. Remove duplicate models: ollama rm <model-name>")
+    logger.info("  2. Install smaller models: ollama pull tinyllama")
+    logger.info("  3. Check usage: lsof +D ~/.ollama")
+    logger.info("")
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

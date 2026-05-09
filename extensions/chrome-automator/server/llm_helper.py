@@ -34,6 +34,20 @@ def _ollama_generate_sync(prompt: str, model: str = DEFAULT_MODEL, system: str =
         return ""
 
 
+def list_local_models() -> list[str]:
+    """Return installed Ollama model names from /api/tags."""
+    req = urllib.request.Request(f"{OLLAMA_BASE}/api/tags")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            payload = json.loads(resp.read())
+        models = payload.get("models", [])
+        names = [m.get("name", "").strip() for m in models if isinstance(m, dict)]
+        return [name for name in names if name]
+    except Exception as e:
+        log.warning("Could not list Ollama models: %s", e)
+        return []
+
+
 async def personalise_email_body(template: str, recipient: str, model: str = DEFAULT_MODEL) -> str:
     """
     Use Ollama to personalise an email body template for a specific recipient.

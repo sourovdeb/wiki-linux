@@ -10,8 +10,18 @@
     <header>
       <h1>Ollama Local Assistant</h1>
       <div class="model-row">
-        <label for="modelInput">Model</label>
-        <input id="modelInput" value="qwen2.5-coder:3b" />
+        <label for="modelSelect">Model</label>
+        <div class="model-input">
+          <select id="modelSelect" title="Installed Ollama models"></select>
+          <button id="refreshModelsBtn" title="Refresh installed models">Refresh</button>
+        </div>
+      </div>
+      <div class="model-row">
+        <label for="modelInput">Manual</label>
+        <div class="model-input">
+          <input id="modelInput" value="llama3.2:3b" />
+          <button id="pickFastModelBtn" title="Pick a small local model for faster responses">Pick fast</button>
+        </div>
       </div>
     </header>
 
@@ -21,6 +31,8 @@
         <button id="searchBtn">Search Specific Info</button>
         <button id="crawlBtn">Crawl Visible Links</button>
         <button id="pdfBtn">Download PDF Links</button>
+        <button id="brainstormBtn">Brainstorm Ideas</button>
+        <button id="mindfulBtn">Mindful Next Step</button>
         <button id="fillFormBtn">Fill Form (with JSON plan)</button>
       </section>
 

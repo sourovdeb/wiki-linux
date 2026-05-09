@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+
+out_dir="$repo_root/_meta/reports"
+mkdir -p "$out_dir"
+ts="$(date -u +%Y%m%d-%H%M%S)"
+report="$out_dir/disk-report-$ts.md"
+
+deep="no"
+stdout="no"
+targets=()
+
+usage() {
+  cat <<'EOF'
+Usage: wiki-disk-report [--deep] [--stdout] [--target PATH ...]
+
+Generates a markdown report under _meta/reports/ with:
+  - df summary
+  - key directory sizes (fast)
+  - optional deep scan (slower)
+
+Flags:
+  --deep        Include top directory + large file scan (can take minutes)
+  --stdout      Also print the report to stdout
+  --target PATH Add a scan target (repeatable). Defaults to a safe set.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --deep) deep="yes"; shift ;;
+    --stdout) stdout="yes"; shift ;;
+    --target)
+      [[ $# -ge 2 ]] || { echo "Missing value for --target"; exit 2; }
+      targets+=("$2")
+      shift 2
+      ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown arg: $1"; usage; exit 2 ;;
+  esac
+done
+
+human_bytes() {
+  local n="${1:-0}"
+  if command -v numfmt >/dev/null 2>&1; then
+    numfmt --to=iec-i --suffix=B "$n" 2>/dev/null || echo "${n}B"
+  else
+    echo "${n}B"
+  fi
+}
+
+du_bytes() {
+  local p="$1"
+  du -sb --apparent-size "$p" 2>/dev/null | awk '{print $1}' | head -n 1
+}
+
+df_line() {
+  local p="$1"
+  df -hP "$p" 2>/dev/null | awk 'NR==2 {print $0}' || true
+}
+
+df_pct() {
+  local p="$1"
+  df -P "$p" 2>/dev/null | awk 'NR==2 {gsub(/%/,"",$5); print $5}' || echo ""
+}
+
+append_section() {
+  local title="$1"
+  printf "\n## %s\n\n" "$title" >>"$report"
+}
+
+append_kv() {
+  local k="$1" v="$2"
+  printf -- "- %s: %s\n" "$k" "$v"
+}
+
+default_targets=(
+  "$repo_root"
+  "$HOME/wiki"
+  "$HOME/.ollama"
+  "$HOME/.cache"
+  "$HOME/.local/share/wiki-linux"
+  "$HOME/.config/open-webui"
+  "/var/lib/wiki-linux"
+)
+
+if [[ ${#targets[@]} -eq 0 ]]; then
+  targets=("${default_targets[@]}")
+fi
+
+{
+  echo "# Disk Report"
+  echo
+  append_kv "generated_utc" "$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  append_kv "repo_root" "$repo_root"
+  append_kv "deep_scan" "$deep"
+  echo
+} >"$report"
+
+append_section "Filesystem"
+{
+  append_kv "df_root" "$(df_line /)"
+  append_kv "df_home" "$(df_line "$HOME")"
+  append_kv "root_use_pct" "$(df_pct /)%"
+} >>"$report"
+
+append_section "Key Directories (Fast)"
+{
+  echo "| Path | Size | Note |"
+  echo "|------|------|------|"
+  for p in "${targets[@]}"; do
+    if [[ -e "$p" ]]; then
+      b="$(du_bytes "$p" || echo 0)"
+      h="$(human_bytes "${b:-0}")"
+      printf "| %s | %s | %s |\n" "$p" "$h" "exists"
+    else
+      printf "| %s | %s | %s |\n" "$p" "-" "missing"
+    fi
+  done
+} >>"$report"
+
+append_section "Ollama Models"
+if command -v ollama >/dev/null 2>&1; then
+  {
+    echo '```'
+    ollama list 2>/dev/null || echo "(ollama list failed — is the server running?)"
+    echo '```'
+  } >>"$report"
+else
+  echo "- ollama: not installed" >>"$report"
+fi
+
+append_section "Notes"
+{
+  echo "- This report avoids scanning all of `$HOME` by default."
+  echo "- Run with `--deep` to find top consumers (ETA: ~1–5 minutes depending on disk speed)."
+} >>"$report"
+
+if [[ "$deep" == "yes" ]]; then
+  append_section "Deep Scan (Top Directories)"
+  {
+    echo "- ETA: ~1–5 minutes (can be longer on slow disks)."
+    echo
+    for base in "${targets[@]}"; do
+      [[ -d "$base" ]] || continue
+      echo "### $(printf '%s' "$base" | sed 's/|/\\\\|/g')"
+      echo
+      echo '```'
+      du -x -B1 -d 2 "$base" 2>/dev/null | sort -nr | head -n 25 | awk '{printf "%s\t%s\n", $1, $2}'
+      echo '```'
+      echo
+    done
+  } >>"$report"
+
+  append_section "Deep Scan (Largest Files)"
+  {
+    echo "- Limited to the configured targets (does not crawl the whole filesystem)."
+    echo
+    echo '```'
+    {
+      for base in "${targets[@]}"; do
+        [[ -d "$base" ]] || continue
+        find "$base" -xdev -type f -printf '%s\t%p\n' 2>/dev/null || true
+      done
+    } | sort -nr | head -n 40 | awk '{printf "%s\t%s\n", $1, $2}'
+    echo '```'
+  } >>"$report"
+fi
+
+echo "Disk report: $report"
+if [[ "$stdout" == "yes" ]]; then
+  cat "$report"
+fi

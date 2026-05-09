@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""
+Wiki Library ZIP Archive Management
+- List large ZIP files in wiki/user/my_library
+- Check if archives are necessary or extractable
+- Provide safe removal recommendations
+- Show extraction status
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import subprocess
+import sys
+import zipfile
+from dataclasses import dataclass
+from pathlib import Path
+
+HOME = Path.home()
+LIBRARY_DIR = HOME / "wiki" / "user" / "my_library"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ZipFileInfo:
+    path: Path
+    size_mb: float
+    extracted_size_mb: float = 0
+    file_count: int = 0
+    status: str = "unknown"
+    is_extractable: bool = False
+
+
+def analyze_zip_files() -> list[ZipFileInfo]:
+    """Analyze all ZIP files in library directory."""
+    zips = []
+    
+    if not LIBRARY_DIR.exists():
+        return zips
+    
+    for zip_file in LIBRARY_DIR.glob("*.zip"):
+        try:
+            size_mb = zip_file.stat().st_size / 1024 / 1024
+            info = ZipFileInfo(
+                path=zip_file,
+                size_mb=size_mb,
+            )
+            
+            # Check if extractable
+            try:
+                with zipfile.ZipFile(zip_file, 'r') as z:
+                    # Calculate extracted size
+                    extracted_size = sum(zi.file_size for zi in z.infolist()) / 1024 / 1024
+                    info.extracted_size_mb = extracted_size
+                    info.file_count = len(z.infolist())
+                    info.is_extractable = True
+                    
+                    # Test integrity
+                    result = z.testzip()
+                    info.status = "ok" if result is None else "corrupted"
+            except Exception as e:
+                info.status = f"error: {str(e)}"
+                info.is_extractable = False
+            
+            zips.append(info)
+        except Exception as e:
+            logger.warning(f"Failed to analyze {zip_file.name}: {e}")
+    
+    return sorted(zips, key=lambda x: x.size_mb, reverse=True)
+
+
+def check_if_extracted(zip_file: Path) -> bool:
+    """Check if ZIP file appears to have been extracted."""
+    try:
+        with zipfile.ZipFile(zip_file, 'r') as z:
+            # Look for corresponding extracted files/dirs
+            base_name = zip_file.stem
+            
+            # Check if extraction directory exists
+            potential_dirs = [
+                LIBRARY_DIR / base_name,
+                LIBRARY_DIR / base_name.replace("-", "_"),
+                LIBRARY_DIR / base_name.split("-")[0],
+            ]
+            
+            for potential_dir in potential_dirs:
+                if potential_dir.exists():
+                    return True
+    except Exception:
+        pass
+    
+    return False
+
+
+def get_disk_impact(zips: list[ZipFileInfo]) -> dict:
+    """Calculate potential disk space recovery."""
+    return {
+        "total_zip_size_mb": sum(z.size_mb for z in zips),
+        "total_zip_size_gb": round(sum(z.size_mb for z in zips) / 1024, 1),
+        "potentially_redundant": [
+            {
+                "file": z.path.name,
+                "size_mb": round(z.size_mb, 1),
+                "extracted": check_if_extracted(z.path),
+            }
+            for z in zips
+        ],
+    }
+
+
+def main() -> int:
+    """Main analysis."""
+    if not LIBRARY_DIR.exists():
+        logger.info(f"Library directory not found: {LIBRARY_DIR}")
+        return 0
+    
+    logger.info("=== Wiki Library Archive Analysis ===\n")
+    
+    zips = analyze_zip_files()
+    
+    if not zips:
+        logger.info("No ZIP files found in library.\n")
+        return 0
+    
+    logger.info(f"📦 Found {len(zips)} ZIP file(s):\n")
+    
+    for i, z in enumerate(zips, 1):
+        status_icon = "✓" if z.is_extractable else "✗"
+        logger.info(f"{i}. {z.path.name}")
+        logger.info(f"   Size: {z.size_mb:.1f}MB")
+        logger.info(f"   Files: {z.file_count}")
+        logger.info(f"   Status: {status_icon} {z.status}")
+        
+        if z.extracted_size_mb > 0:
+            ratio = z.extracted_size_mb / z.size_mb if z.size_mb > 0 else 0
+            logger.info(f"   Extracted size: {z.extracted_size_mb:.1f}MB (ratio: {ratio:.1f}x)")
+        
+        if check_if_extracted(z.path):
+            logger.info(f"   ⚠️  Appears to be extracted already")
+        
+        logger.info()
+    
+    # Disk impact
+    impact = get_disk_impact(zips)
+    logger.info(f"💾 Disk Impact:")
+    logger.info(f"   Total ZIP size: {impact['total_zip_size_gb']}GB\n")
+    
+    # Recommendations
+    logger.info("💡 Recommendations:")
+    
+    potentially_redundant = sum(
+        1 for item in impact['potentially_redundant']
+        if item['extracted']
+    )
+    
+    if potentially_redundant > 0:
+        logger.info(f"   ⚠️  {potentially_redundant} archive(s) appear to be extracted")
+        logger.info(f"   💰 Potential recovery: {potentially_redundant * 2}GB (if extracted copies removed)\n")
+        
+        for item in impact['potentially_redundant']:
+            if item['extracted']:
+                logger.info(f"   • SAFE TO REMOVE: {item['file']}")
+    else:
+        logger.info("   ℹ️  Archives appear to be in use\n")
+    
+    logger.info("🔧 Safe Removal:")
+    logger.info("   1. Extract archive to verify contents: unzip -l <file.zip>")
+    logger.info("   2. Check if extracted version exists: ls -la ~/wiki/user/my_library/")
+    logger.info("   3. If both exist, remove ZIP: rm <file.zip>")
+    logger.info("   4. Run maintenance: wiki-system-maintenance\n")
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,139 @@
+{
+  "name": "wp-control-prototype",
+  "displayName": "WP Control Prototype",
+  "description": "Safe, local-first WordPress control panel with AI assistance.",
+  "version": "3.0.2-prototype",
+  "publisher": "sourovdeb",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "wpControl.openStudio",
+        "title": "WP Control: Open Studio"
+      },
+      {
+        "command": "wpControl.siteHealth",
+        "title": "WP Control: Site Health Check"
+      },
+      {
+        "command": "wpControl.importArticlesToQueue",
+        "title": "WP Control: Import Articles To Queue"
+      },
+      {
+        "command": "wpControl.autopilotPing",
+        "title": "WP Control: AutoPilot Ping"
+      },
+      {
+        "command": "wpControl.autopilotDryRun",
+        "title": "WP Control: AutoPilot Dry Run"
+      },
+      {
+        "command": "wpControl.autopilotLiveRun",
+        "title": "WP Control: AutoPilot Live Run"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "WP Control",
+      "properties": {
+        "wpControl.wordpressUrl": {
+          "type": "string",
+          "default": "",
+          "description": "WordPress site URL, example: https://example.com"
+        },
+        "wpControl.wpUser": {
+          "type": "string",
+          "default": "",
+          "description": "WordPress username for Application Password auth"
+        },
+        "wpControl.wpAppPassword": {
+          "type": "string",
+          "default": "",
+          "description": "WordPress application password"
+        },
+        "wpControl.pluginKey": {
+          "type": "string",
+          "default": "",
+          "description": "Optional plugin secret header fallback"
+        },
+        "wpControl.aiProvider": {
+          "type": "string",
+          "default": "openwebui",
+          "enum": [
+            "openwebui",
+            "ollama",
+            "claude",
+            "deepseek"
+          ],
+          "description": "AI provider for generation. openwebui is local-first default."
+        },
+        "wpControl.openwebuiUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8080",
+          "description": "Open WebUI URL"
+        },
+        "wpControl.openwebuiModel": {
+          "type": "string",
+          "default": "llama3.2",
+          "description": "Default Open WebUI model"
+        },
+        "wpControl.openwebuiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Optional Open WebUI API key"
+        },
+        "wpControl.ollamaUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:11434",
+          "description": "Local Ollama URL"
+        },
+        "wpControl.ollamaModel": {
+          "type": "string",
+          "default": "llama3.2",
+          "description": "Default Ollama model"
+        },
+        "wpControl.claudeKey": {
+          "type": "string",
+          "default": "",
+          "description": "Anthropic API key"
+        },
+        "wpControl.deepseekKey": {
+          "type": "string",
+          "default": "",
+          "description": "DeepSeek API key"
+        },
+        "wpControl.approvalMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "If true, generated content must be reviewed before mutating actions"
+        },
+        "wpControl.articlesDir": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to markdown articles folder for queue import"
+        },
+        "wpControl.autopilotAutomationDir": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to wordpress-control automation directory containing main.py"
+        },
+        "wpControl.autopilotPythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional absolute path to AutoPilot Python executable. Defaults to automation/.venv/bin/python"
+        },
+        "wpControl.autopilotUseDeepSeek": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, AutoPilot runs with DeepSeek enrichment. If false, AutoPilot runs with --no-ai."
+        }
+      }
+    }
+  }
+}

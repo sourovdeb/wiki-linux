@@ -7,6 +7,9 @@ body {
   font-family: "Segoe UI", "Noto Sans", sans-serif;
   background: linear-gradient(160deg, #f4f8ff 0%, #edf4f7 100%);
   color: #1f2a37;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 header {
@@ -28,6 +31,13 @@ h1 {
   align-items: center;
 }
 
+.model-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
 .model-row input {
   width: 100%;
   padding: 6px;
@@ -35,10 +45,19 @@ h1 {
   border-radius: 8px;
 }
 
+.model-row select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #c5d4df;
+  border-radius: 8px;
+  background: #fff;
+}
+
 main {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  height: calc(100vh - 78px);
+  flex: 1;
+  min-height: 0;
 }
 
 .actions {

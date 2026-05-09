@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Wiki Automator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Batch email, LinkedIn/Medium posting, activity recording — powered by Playwright + Ollama SLM.",
   "permissions": [
     "storage",
@@ -10,7 +10,8 @@
     "activeTab",
     "scripting",
     "sidePanel",
-    "notifications"
+    "notifications",
+    "alarms"
   ],
   "host_permissions": [
     "https://mail.google.com/*",
@@ -50,5 +51,6 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "minimum_chrome_version": "120"
 }

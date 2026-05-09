@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""
+Wiki-Linux Sticky Reminder - Desktop sticky note reminders
+Shows reminders as sticky notes on desktop wallpaper
+"""
+import json
+import os
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import List, Dict, Any
+
+# Configuration
+WIKI_ROOT = Path(os.environ.get("WIKI_ROOT", str(Path.home() / "Documents/wiki-linux/wiki-linux"))).expanduser()
+REMINDERS_FILE = Path("_meta") / "reminders.jsonl"  # Use relative path to current directory
+CACHE_DIR = Path.home() / ".cache" / "wiki-sticky"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+STICKY_FILE = CACHE_DIR / "sticky-reminders.png"
+
+def load_reminders() -> List[Dict[str, Any]]:
+    """Load reminders from the reminders file"""
+    reminders = []
+    if not REMINDERS_FILE.exists():
+        return reminders
+
+    for line in REMINDERS_FILE.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            reminders.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return reminders
+
+def get_due_reminders(reminders: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Filter reminders that are due or pending"""
+    due_reminders = []
+    now = datetime.now(timezone.utc).astimezone()
+
+    for reminder in reminders:
+        if reminder.get("fired"):
+            continue
+
+        try:
+            from dateutil import parser as dtp
+            due = dtp.parse(reminder["due"])
+            if due <= now:
+                due_reminders.append(reminder)
+        except Exception:
+            # Include reminders with invalid dates as pending
+            due_reminders.append(reminder)
+
+    return due_reminders
+
+def generate_sticky_note(reminders: List[Dict[str, Any]]) -> str:
+    """Generate sticky note content from reminders"""
+    if not reminders:
+        return "No reminders due!"
+
+    lines = ["📝 STICKY REMINDERS"]
+    lines.append("=" * 30)
+
+    for i, reminder in enumerate(reminders[:5], 1):  # Show max 5 reminders
+        due_str = reminder.get("due", "?").split("T")[0] if "T" in reminder.get("due", "") else reminder.get("due", "?")
+        message = reminder.get("message", "No message").strip()
+        lines.append(f"{i}. [{due_str}] {message}")
+
+    lines.append("=" * 30)
+    lines.append(f"Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append("Use 'wiki reminder' to manage reminders")
+
+    return "\n".join(lines)
+
+def create_sticky_image(content: str) -> str:
+    """Create a sticky note image using ImageMagick"""
+    # Check if ImageMagick is available
+    for cmd in ("magick", "convert"):
+        try:
+            subprocess.run([cmd, "--version"], capture_output=True, check=True)
+            im = cmd
+            break
+        except:
+            continue
+    else:
+        raise SystemExit("ImageMagick command not found (magick/convert)")
+
+    # Create a yellow sticky note background
+    temp_bg = CACHE_DIR / "sticky-bg.png"
+    temp_text = CACHE_DIR / "sticky-text.png"
+
+    # Create sticky note background
+    subprocess.run([
+        im, "-size", "400x300", "xc:#fff9c4",
+        "-fill", "#f9f1a5", "-draw", "roundrectangle 0,0,399,299,20,20",
+        str(temp_bg)
+    ], check=True)
+
+    # Add text to sticky note
+    subprocess.run([
+        im, str(temp_bg),
+        "-font", "DejaVu-Sans",
+        "-pointsize", "16",
+        "-fill", "#5d4037",
+        "-gravity", "NorthWest",
+        "-annotate", "+20+20", content,
+        str(temp_text)
+    ], check=True)
+
+    # Add shadow effect
+    subprocess.run([
+        im, str(temp_text),
+        "-background", "transparent",
+        "-shadow", "80x3+5+5",
+        str(STICKY_FILE)
+    ], check=True)
+
+    # Clean up temp files
+    for temp in [temp_bg, temp_text]:
+        if temp.exists():
+            temp.unlink()
+
+    return str(STICKY_FILE)
+
+def set_as_wallpaper(image_path: str) -> bool:
+    """Set the image as desktop wallpaper"""
+    try:
+        # Try different wallpaper setting methods
+        methods = [
+            ["gsettings", "set", "org.gnome.desktop.background", "picture-uri", f"file://{image_path}"],
+            ["feh", "--bg-fill", image_path],
+            ["nitrogen", "--set-auto", image_path],
+            ["xfconf-query", "-c", "xfce4-desktop", "-p", "/backdrop/screen0/monitor0/image-path", "-s", image_path]
+        ]
+
+        for method in methods:
+            try:
+                subprocess.run(method, check=True)
+                return True
+            except:
+                continue
+
+        return False
+    except Exception:
+        return False
+
+def overlay_on_existing_wallpaper(sticky_path: str) -> str:
+    """Overlay sticky note on existing wallpaper"""
+    # Get current wallpaper
+    current_wallpaper = None
+    try:
+        result = subprocess.run([
+            "gsettings", "get", "org.gnome.desktop.background", "picture-uri"
+        ], capture_output=True, text=True)
+        if result.returncode == 0:
+            uri = result.stdout.strip().strip("'")
+            if uri.startswith("file://"):
+                current_wallpaper = uri[7:]
+    except:
+        pass
+
+    if not current_wallpaper or not Path(current_wallpaper).exists():
+        # Create a default background
+        current_wallpaper = CACHE_DIR / "default-wallpaper.png"
+        subprocess.run([
+            "magick", "-size", "1920x1080", "gradient:#f0f0f0-#d0d0d0", str(current_wallpaper)
+        ], check=True)
+
+    # Overlay sticky note on wallpaper
+    final_wallpaper = CACHE_DIR / "wallpaper-with-sticky.png"
+    subprocess.run([
+        "magick", "composite", "-gravity", "NorthEast", "-geometry", "+20+20",
+        str(sticky_path), str(current_wallpaper), str(final_wallpaper)
+    ], check=True)
+
+    return str(final_wallpaper)
+
+def show_sticky_notification():
+    """Show a desktop notification with reminders"""
+    reminders = load_reminders()
+    due_reminders = get_due_reminders(reminders)
+
+    if not due_reminders:
+        return
+
+    content = generate_sticky_note(due_reminders)
+
+    # Show notification
+    try:
+        subprocess.run([
+            "notify-send", "📝 Wiki Reminders",
+            f"You have {len(due_reminders)} reminder(s) due!",
+            "-t", "10000"  # 10 seconds
+        ])
+    except:
+        pass
+
+def main():
+    """Main function to create and display sticky reminders"""
+    reminders = load_reminders()
+    due_reminders = get_due_reminders(reminders)
+
+    if not due_reminders:
+        print("No due reminders found.")
+        return
+
+    # Generate sticky note content
+    content = generate_sticky_note(due_reminders)
+    print(f"Generating sticky note with {len(due_reminders)} reminder(s)...")
+
+    # Create sticky note image
+    try:
+        sticky_path = create_sticky_image(content)
+        print(f"Sticky note created: {sticky_path}")
+
+        # Overlay on wallpaper and set as background
+        final_wallpaper = overlay_on_existing_wallpaper(sticky_path)
+        print(f"Final wallpaper created: {final_wallpaper}")
+
+        if set_as_wallpaper(final_wallpaper):
+            print("Wallpaper updated with sticky reminders!")
+        else:
+            print("Could not set wallpaper automatically. You can manually set:")
+            print(f"  {final_wallpaper}")
+
+        # Also show notification
+        show_sticky_notification()
+
+    except Exception as e:
+        print(f"Error creating sticky reminder: {e}")
+        sys.exit(1)
+
+def daemon_mode():
+    """Run in daemon mode, checking reminders periodically"""
+    import time
+    print("Starting sticky reminder daemon (checks every 5 minutes)...")
+
+    while True:
+        try:
+            main()
+        except Exception as e:
+            print(f"Error in daemon mode: {e}")
+
+        # Wait 5 minutes before next check
+        time.sleep(300)
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--daemon":
+        daemon_mode()
+    else:
+        main()

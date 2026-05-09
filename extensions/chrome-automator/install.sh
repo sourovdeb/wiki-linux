@@ -21,10 +21,15 @@ echo "Python deps installed"
 "$SERVER_DIR/.venv/bin/playwright" install chromium
 echo "Playwright Chromium installed"
 
-# Generate placeholder icons
+# Generate placeholder icons (best effort; existing icons are already bundled)
 python3 - <<'PYEOF'
-from PIL import Image, ImageDraw
 import os
+
+try:
+    from PIL import Image, ImageDraw
+except Exception:
+    print("Pillow not installed; skipping icon generation.")
+    raise SystemExit(0)
 
 icons_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
 os.makedirs(icons_dir, exist_ok=True)

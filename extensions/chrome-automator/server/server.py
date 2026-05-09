@@ -24,12 +24,12 @@ from email_batch import run_email_batch
 from social_post import run_social_post
 from activity_learner import analyse_recordings, save_recording
 from session_store import save_session_cookies
-from llm_helper import rewrite_with_ollama
+from llm_helper import rewrite_with_ollama, list_local_models
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("automator")
 
-app = FastAPI(title="Wiki Automator", version="1.0.0")
+app = FastAPI(title="Wiki Automator", version="1.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 DATA_DIR = Path(__file__).parent.parent / "recordings"
@@ -81,6 +81,11 @@ def health():
     return {"status": "ok", "time": datetime.now().isoformat()}
 
 
+@app.get("/api/ollama/models")
+def ollama_models():
+    return {"models": list_local_models()}
+
+
 # ── Sessions ──────────────────────────────────────────────────────────────────
 
 @app.post("/api/sessions/save")
@@ -94,7 +99,7 @@ async def save_session(payload: SessionPayload):
 
 @app.post("/api/recordings/save")
 async def save_recording_endpoint(payload: RecordingPayload):
-    save_recording(payload.dict())
+    save_recording(payload.model_dump())
     return {"ok": True}
 
 
@@ -126,6 +131,7 @@ async def run_job(req: JobRequest):
                     title=req.title,
                     content=content,
                     job=_jobs[job_id],
+                    dry_run=req.dry_run,
                 )
             _jobs[job_id]["status"] = "done"
         except Exception as e:

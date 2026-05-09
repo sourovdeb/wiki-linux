@@ -1,0 +1,12 @@
+[Unit]
+Description=Wiki-Linux System Maintenance Timer (daily at boot + 3AM)
+Requires=wiki-system-maintenance.service
+
+[Timer]
+OnBootSec=2min
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

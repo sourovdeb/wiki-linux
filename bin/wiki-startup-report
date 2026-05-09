@@ -8,16 +8,50 @@ session_file="$session_dir/$(date +%Y%m%d-%H%M%S)-startup.md"
 
 mkdir -p "$session_dir"
 
+# Best-effort: previous startup report (for "since last session")
+prev_session_file="$(ls -1t "$session_dir"/*-startup.md 2>/dev/null | head -n 1 || true)"
+
+# Best-effort systemctl status (works even when systemd user bus isn't available)
+systemctl_user_is_active() {
+  local unit="$1"
+  local out=""
+  out="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
+  out="${out%% *}"
+  if [[ -z "$out" ]]; then
+    echo "unknown"
+    return 0
+  fi
+  echo "$out"
+}
+
 # Check system status
 page_count=$(find "$repo_root" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-daemon_status=$(systemctl --user is-active wiki-monitor 2>&1 | tr -d '\n' | awk '{print $1}')
-[ -z "$daemon_status" ] && daemon_status="down"
+daemon_status="$(systemctl_user_is_active "wiki-monitor.service")"
 ollama_status=$(curl -fsS --max-time 2 http://127.0.0.1:11434 >/dev/null 2>&1 && echo "yes" || echo "no")
 webui_status=$(curl -fsS --max-time 2 http://127.0.0.1:8080 >/dev/null 2>&1 && echo "yes" || echo "no")
 git_summary=$(git -C "$repo_root" log -1 --pretty='%ar — %s' 2>/dev/null || echo "no commits")
 
 # Get recent changes
-changed_files=$(git -C "$repo_root" diff --name-only HEAD~5..HEAD 2>/dev/null | head -5 | sed 's/^/  • /' || echo "  (no changes)")
+changed_files="  (no changes)"
+if [[ -n "$prev_session_file" && -f "$prev_session_file" ]]; then
+  changed_files="$(
+    find "$repo_root" -type f \
+      -not -path "$repo_root/.git/*" \
+      -not -path "$repo_root/_meta/session/*" \
+      -newer "$prev_session_file" 2>/dev/null \
+      | sed "s#^$repo_root/##" \
+      | head -n 8 \
+      | sed 's/^/  • /' || true
+  )"
+  [[ -z "$changed_files" ]] && changed_files="  (no changes)"
+else
+  changed_files="$(
+    git -C "$repo_root" diff --name-only HEAD~5..HEAD 2>/dev/null \
+      | head -n 8 \
+      | sed 's/^/  • /' || true
+  )"
+  [[ -z "$changed_files" ]] && changed_files="  (no changes)"
+fi
 
 # Detect issues
 issues=""
@@ -74,10 +108,12 @@ Fix with: \`systemctl --user restart wiki-monitor\`
 EOF
 
 # Display in terminal or GUI based on DISPLAY
-if [ -n "${DISPLAY:-}" ]; then
-    zenity --text-info --title="Wiki-Linux Startup Report" --filename="$session_file" --width=700 --height=600 2>/dev/null &
+if [[ -n "${DISPLAY:-}" ]] && command -v zenity >/dev/null 2>&1; then
+  if ! zenity --text-info --title="Wiki-Linux Startup Report" --filename="$session_file" --width=700 --height=600 2>/dev/null; then
+    cat "$session_file" || true
+  fi
 else
-    cat "$session_file"
+  cat "$session_file" || true
 fi
 
-echo "📊 Startup report: $session_file"
+printf "📊 Startup report: %s\n" "$session_file" 2>/dev/null || true

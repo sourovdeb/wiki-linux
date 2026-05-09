@@ -1,0 +1,13 @@
+[Unit]
+Description=Wiki-Linux Sticky Reminder Daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/sourov/Documents/wiki-linux/wiki-linux/bin/wiki-sticky-reminder --daemon
+Restart=on-failure
+RestartSec=60
+Environment=WIKI_ROOT=/home/sourov/Documents/wiki-linux/wiki-linux
+
+[Install]
+WantedBy=default.target

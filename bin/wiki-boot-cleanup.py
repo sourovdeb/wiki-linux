@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 HOME = Path.home()
-WIKI_ROOT = HOME / "Documents" / "wiki-linux" / "wiki-linux"
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def safe_unlink(path: Path) -> bool:
@@ -81,9 +81,9 @@ def remove_old_cache_files(cache_dir: Path, older_than_days: int = 14) -> int:
 def main() -> int:
     total_removed = 0
 
-    if WIKI_ROOT.exists():
-        total_removed += remove_python_cache(WIKI_ROOT)
-        total_removed += remove_old_tmp(WIKI_ROOT, older_than_hours=24)
+    if REPO_ROOT.exists():
+        total_removed += remove_python_cache(REPO_ROOT)
+        total_removed += remove_old_tmp(REPO_ROOT, older_than_hours=24)
 
     total_removed += remove_partial_ollama_blobs()
     total_removed += remove_old_cache_files(HOME / ".cache", older_than_days=14)

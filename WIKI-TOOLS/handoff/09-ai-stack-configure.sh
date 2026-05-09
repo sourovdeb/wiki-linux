@@ -21,6 +21,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 Environment="OLLAMA_HOST=127.0.0.1:11434"
+Environment="OLLAMA_ORIGINS=chrome-extension://*,moz-extension://*,safari-web-extension://*"
 Environment="OLLAMA_NUM_PARALLEL=1"
 ExecStart=/usr/bin/ollama serve
 Restart=always

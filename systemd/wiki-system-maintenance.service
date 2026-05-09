@@ -1,0 +1,20 @@
+[Unit]
+Description=Wiki-Linux System Maintenance (Safe garbage collection & disk recovery)
+After=network-online.target
+Wants=network-online.target
+DefaultDependencies=no
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+User=sourov
+Group=sourov
+ExecStart=%h/Documents/wiki-linux/wiki-linux/bin/wiki-system-maintenance
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+[Install]
+WantedBy=multi-user.target

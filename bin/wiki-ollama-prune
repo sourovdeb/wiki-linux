@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Safe Ollama model cleanup helper.
+# Default: DRY RUN (prints what would be removed).
+# Use --apply --yes to actually remove.
+
+apply="no"
+yes="no"
+extra_keep=()
+
+usage() {
+  cat <<'EOF'
+Usage: wiki-ollama-prune [--keep MODEL ...] [--apply --yes]
+
+Default behavior is DRY RUN:
+  - Reads ~/.config/wiki-linux/config.json to find the configured default model
+  - Keeps that model + nomic-embed-text (embedding) by default
+  - Prints removable models and estimated freed space from `ollama list`
+
+To remove models:
+  wiki-ollama-prune --apply --yes
+
+Add additional models to keep:
+  wiki-ollama-prune --keep llama3.2:3b --keep phi3.5
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --keep)
+      [[ $# -ge 2 ]] || { echo "Missing value for --keep"; exit 2; }
+      extra_keep+=("$2")
+      shift 2
+      ;;
+    --apply) apply="yes"; shift ;;
+    --yes) yes="yes"; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown arg: $1"; usage; exit 2 ;;
+  esac
+done
+
+if ! command -v ollama >/dev/null 2>&1; then
+  echo "ollama is not installed."
+  exit 1
+fi
+
+if ! ollama list >/dev/null 2>&1; then
+  echo "ollama list failed (is the Ollama server running?)."
+  exit 1
+fi
+
+cfg_model="$(
+  python3 - <<'PY' 2>/dev/null || true
+import json, pathlib
+p = pathlib.Path.home() / ".config/wiki-linux/config.json"
+try:
+  c = json.loads(p.read_text())
+  print((c.get("ollama", {}) or {}).get("model", "") or "")
+except Exception:
+  print("")
+PY
+)"
+
+keep_set=()
+if [[ -n "${cfg_model:-}" ]]; then
+  keep_set+=("$cfg_model")
+fi
+keep_set+=("nomic-embed-text" "nomic-embed-text:latest")
+keep_set+=("${extra_keep[@]}")
+
+is_kept() {
+  local name="$1"
+  local k
+  for k in "${keep_set[@]}"; do
+    if [[ "$k" == *:* ]]; then
+      [[ "$name" == "$k" ]] && return 0
+      continue
+    fi
+    [[ "$name" == "$k" ]] && return 0
+    [[ "$name" == "${k}:latest" ]] && return 0
+    [[ "${name%%:*}" == "$k" ]] && return 0
+  done
+  return 1
+}
+
+# Parse `ollama list` columns: NAME ID SIZE MODIFIED
+# We only need NAME + SIZE.
+models_to_remove=()
+estimated_free_gb="0"
+
+while IFS= read -r line; do
+  # skip header
+  [[ "$line" == NAME* ]] && continue
+  name="$(awk '{print $1}' <<<"$line")"
+  size="$(awk '{print $3" "$4}' <<<"$line")"  # e.g. "4.7 GB"
+
+  if is_kept "$name"; then
+    continue
+  fi
+  models_to_remove+=("$name|$size")
+done < <(ollama list 2>/dev/null || true)
+
+echo "Configured keep set:"
+echo "  - wiki-linux config model: ${cfg_model:-<none>}"
+for k in "${keep_set[@]}"; do
+  echo "  - keep: $k"
+done
+echo
+
+if [[ ${#models_to_remove[@]} -eq 0 ]]; then
+  echo "Nothing to prune."
+  exit 0
+fi
+
+echo "Candidates to remove:"
+for item in "${models_to_remove[@]}"; do
+  name="${item%%|*}"
+  size="${item#*|}"
+  echo "  - $name ($size)"
+done
+echo
+
+if [[ "$apply" != "yes" ]]; then
+  echo "DRY RUN. To remove these models: wiki-ollama-prune --apply --yes"
+  exit 0
+fi
+
+if [[ "$yes" != "yes" ]]; then
+  echo "Refusing to modify models without --yes."
+  exit 2
+fi
+
+for item in "${models_to_remove[@]}"; do
+  name="${item%%|*}"
+  echo "Removing: $name"
+  ollama rm "$name" || true
+done
+
+echo "Done. Current models:"
+ollama list || true

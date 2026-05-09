@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+"""
+Direct Database Importer for Open WebUI
+Inserts tools and prompts directly into the SQLite database
+"""
+
+import json
+import sqlite3
+import uuid
+import time
+from pathlib import Path
+
+# Configuration
+DB_PATH = Path.home() / ".local/share/wiki-linux/openwebui-data/webui.db"
+COPILOT_DIR = Path(__file__).parent.parent / "copilot"
+USER_ID = "11a9933d-cb42-4649-a8e9-7c26765cd9d4"  # sourov user
+
+# Tool definitions
+TOOLS = [
+    ("01_wiki_search.py", "Wiki Search"),
+    ("02_url_to_wiki.py", "URL to Wiki"),
+    ("03_linux_sysinfo.py", "Linux Sysinfo"),
+    ("04_file_finder.py", "File Finder"),
+    ("05_web_search_ddg.py", "Web Search (DuckDuckGo)"),
+    ("06_reminder.py", "Reminder"),
+    ("07_session_report.py", "Session Report"),
+    ("08_brainstorm.py", "Brainstorm"),
+]
+
+# Prompt definitions
+PROMPTS = [
+    ("01_url_to_wiki.md", "URL → Wiki + Bullet Summary"),
+    ("02_wiki_research.md", "Wiki Research + Cited Answer"),
+    ("03_linux_health.md", "Linux Health Check"),
+    ("04_file_find.md", "File Find + Summarise"),
+    ("05_excel_formula.md", "Excel Formula"),
+    ("06_proofread.md", "Proofread (Diff Output)"),
+    ("07_session_recap.md", "Last Session Recap"),
+    ("08_brainstorm.md", "Wiki-grounded Brainstorm"),
+]
+
+def extract_specs(content):
+    """Extract specs from tool docstring."""
+    specs = {"type": "function", "format": "python"}
+    if '"""' in content:
+        lines = content.split('\n')
+        for line in lines:
+            if 'title:' in line:
+                specs['title'] = line.split('title:')[1].strip().strip('"')
+            elif 'description:' in line:
+                specs['description'] = line.split('description:')[1].strip().strip('"')
+    return json.dumps(specs)
+
+def extract_prompt_meta(content):
+    """Extract metadata from prompt markdown."""
+    meta = {}
+    if content.startswith('---'):
+        lines = content.split('\n')
+        in_yaml = False
+        for line in lines:
+            if line.strip() == '---':
+                if in_yaml:
+                    break
+                in_yaml = True
+            elif in_yaml and ':' in line:
+                key, val = line.split(':', 1)
+                meta[key.strip()] = val.strip()
+    return json.dumps(meta) if meta else '{}'
+
+def insert_tools(conn):
+    """Insert all tools into the database."""
+    cursor = conn.cursor()
+    count = 0
+    
+    for filename, name in TOOLS:
+        filepath = COPILOT_DIR / filename
+        if not filepath.exists():
+            print(f"❌ File not found: {filename}")
+            continue
+        
+        content = filepath.read_text(encoding="utf-8")
+        tool_id = str(uuid.uuid4())
+        now = int(time.time() * 1000)  # milliseconds
+        
+        specs = extract_specs(content)
+        meta = json.dumps({"source": "wiki-linux-copilot"})
+        
+        try:
+            cursor.execute(
+                """
+                INSERT INTO tool (id, user_id, name, content, specs, meta, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (tool_id, USER_ID, name, content, specs, meta, now, now)
+            )
+            print(f"✓ Imported tool: {name}")
+            count += 1
+        except Exception as e:
+            print(f"❌ Error importing tool {name}: {e}")
+    
+    conn.commit()
+    return count
+
+def insert_prompts(conn):
+    """Insert all prompts into the database."""
+    cursor = conn.cursor()
+    count = 0
+    
+    for filename, name in PROMPTS:
+        filepath = COPILOT_DIR / filename
+        if not filepath.exists():
+            print(f"❌ File not found: {filename}")
+            continue
+        
+        content = filepath.read_text(encoding="utf-8")
+        prompt_id = str(uuid.uuid4())
+        now = int(time.time() * 1000)  # milliseconds
+        
+        # Extract slug/command from filename
+        command = filename.replace('.md', '').lower()
+        meta = extract_prompt_meta(content)
+        
+        try:
+            cursor.execute(
+                """
+                INSERT INTO prompt (id, command, user_id, name, content, meta, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (prompt_id, command, USER_ID, name, content, meta, True, now, now)
+            )
+            print(f"✓ Imported prompt: {name}")
+            count += 1
+        except Exception as e:
+            print(f"❌ Error importing prompt {name}: {e}")
+    
+    conn.commit()
+    return count
+
+def main():
+    print("=" * 70)
+    print("Wiki-Linux Open WebUI Database Importer")
+    print("=" * 70)
+    print()
+    
+    # Verify database exists
+    if not DB_PATH.exists():
+        print(f"❌ Database not found: {DB_PATH}")
+        return 1
+    
+    print(f"Database: {DB_PATH}")
+    print(f"User ID: {USER_ID}")
+    print()
+    
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row
+        
+        print("Importing Tools...")
+        tools_count = insert_tools(conn)
+        print()
+        
+        print("Importing Prompts...")
+        prompts_count = insert_prompts(conn)
+        print()
+        
+        conn.close()
+        
+        print("=" * 70)
+        print(f"Import Complete: {tools_count}/8 tools, {prompts_count}/8 prompts")
+        print("=" * 70)
+        print()
+        print("✓ Restart Open WebUI to see new tools and prompts")
+        print("✓ Available in Settings → Tools and Settings → Prompts")
+        
+        if tools_count == 8 and prompts_count == 8:
+            print("\n✓ All tools and prompts successfully imported!")
+            return 0
+        else:
+            print(f"\n⚠ Partial import: {tools_count + prompts_count}/16 items")
+            return 1
+            
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+        return 1
+
+if __name__ == "__main__":
+    exit(main())

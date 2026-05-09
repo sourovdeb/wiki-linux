@@ -154,9 +154,19 @@ async def _post_medium(page, title: str, content: str) -> bool:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-async def run_social_post(platforms: list[str], title: str, content: str, job: dict):
+async def run_social_post(platforms: list[str], title: str, content: str, job: dict, dry_run: bool = False):
     """Open browser with saved sessions, post to each platform."""
     job["status"] = "running"
+
+    if dry_run:
+        for platform in platforms:
+            if platform in {"linkedin", "medium"}:
+                log.info("[DRY] Validated social post target: %s", platform)
+                job["done"] += 1
+            else:
+                log.error("[DRY] Unsupported platform: %s", platform)
+                job["failed"] = job.get("failed", 0) + 1
+        return
 
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=False, slow_mo=80)

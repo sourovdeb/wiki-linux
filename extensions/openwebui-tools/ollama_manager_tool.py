@@ -13,13 +13,13 @@ from pathlib import Path
 OLLAMA_BASE = "http://127.0.0.1:11434"
 
 
-def _ollama(method: str, path: str, body: dict | None = None) -> dict:
+def _ollama(method: str, path: str, body: dict | None = None, timeout: int = 30) -> dict:
     url = f"{OLLAMA_BASE}{path}"
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(url, data=data, method=method,
                                  headers={"Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read())
     except Exception as e:
         return {"error": str(e)}
@@ -46,23 +46,24 @@ class Tools:
 
     def pull_model(self, model_name: str) -> str:
         """
-        Pull (download) an Ollama model. This starts the download in the background.
+        Pull (download) an Ollama model via the official Ollama HTTP API.
 
         :param model_name: Model name e.g. 'llama3.2:3b' or 'mistral:latest'.
         :return: Status message.
         """
-        import subprocess
-        try:
-            proc = subprocess.Popen(
-                ["ollama", "pull", model_name],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-            )
-            out, _ = proc.communicate(timeout=300)
-            if proc.returncode == 0:
-                return f"Successfully pulled `{model_name}`."
-            return f"Pull failed:\n```\n{out[-500:]}\n```"
-        except Exception as e:
-            return f"Error: {e}"
+        model = (model_name or "").strip()
+        if not model:
+            return "Error: model_name is required."
+
+        # `stream` defaults to true in Ollama; disable it so we can return a single JSON payload.
+        # Note: this will block until the pull finishes.
+        resp = _ollama("POST", "/api/pull", {"model": model, "stream": False}, timeout=3600)
+        if "error" in resp:
+            return f"Pull error for `{model}`: {resp['error']}"
+        status = resp.get("status", "unknown")
+        if status == "success":
+            return f"Successfully pulled `{model}`."
+        return f"Pull status for `{model}`: {status}"
 
     def delete_model(self, model_name: str) -> str:
         """

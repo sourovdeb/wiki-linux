@@ -1,0 +1,20 @@
+You are writing a WordPress article for a human audience.
+Return only valid JSON with this exact shape:
+{
+  "title": "clear article title",
+  "content": "full HTML article body using p, h2, ul, li",
+  "meta_desc": "SEO meta description <= 160 chars",
+  "seo_title": "SEO title <= 60 chars",
+  "tags": ["tag-one", "tag-two", "tag-three"],
+  "excerpt": "2 sentence excerpt"
+}
+
+Rules:
+- Keep content factual and useful.
+- Use short sections and clear headings.
+- Include at least one bullet list.
+- Avoid marketing fluff.
+
+Topic: {{topic}}
+Tone: {{tone}}
+Target words: {{wordCount}}

@@ -2,6 +2,7 @@
 // Handles: cookie capture, session storage, message routing to local Python server
 
 const SERVER = "http://127.0.0.1:7070";
+const BADGE_ALARM = "server_health_badge";
 
 // ── Session cookie capture ───────────────────────────────────────────────────
 // Called from popup when user clicks "Capture Session" for a platform
@@ -31,9 +32,13 @@ async function captureSessionCookies(platform) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return { ok: true, count: cookies.length, platform };
+    const result = { ok: true, count: cookies.length, platform };
+    broadcast({ type: "SESSION_CAPTURED", platform, count: cookies.length });
+    return result;
   } catch (e) {
-    return { ok: true, count: cookies.length, platform, warning: "Server offline — saved locally only" };
+    const result = { ok: true, count: cookies.length, platform, warning: "Server offline — saved locally only" };
+    broadcast({ type: "SESSION_CAPTURED", platform, count: cookies.length });
+    return result;
   }
 }
 
@@ -52,6 +57,11 @@ async function saveRecording(recording) {
   recordings.push(recording);
   // Keep last 500 recordings
   await chrome.storage.local.set({ recordings: recordings.slice(-500) });
+  broadcast({
+    type: "RECORDING_SAVED",
+    platform: recording?.platform || "unknown",
+    count: Array.isArray(recording?.actions) ? recording.actions.length : 0
+  });
 }
 
 // ── Server health check ───────────────────────────────────────────────────────
@@ -62,6 +72,22 @@ async function checkServer() {
   } catch (_) {
     return false;
   }
+}
+
+function broadcast(message) {
+  chrome.runtime.sendMessage(message).catch(() => {});
+}
+
+async function updateBadge() {
+  const online = await checkServer();
+  await chrome.action.setBadgeText({ text: online ? "" : "off" });
+  await chrome.action.setBadgeBackgroundColor({ color: online ? "#22c55e" : "#ef4444" });
+}
+
+async function ensureBadgeAlarm() {
+  const existing = await chrome.alarms.get(BADGE_ALARM);
+  if (existing) return;
+  await chrome.alarms.create(BADGE_ALARM, { periodInMinutes: 0.5 });
 }
 
 // ── Message handler ───────────────────────────────────────────────────────────
@@ -95,7 +121,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(msg.job),
           });
-          sendResponse(await r.json());
+          const payload = await r.json();
+          if (payload?.job_id) {
+            broadcast({ type: "JOB_UPDATE", jobId: payload.job_id, status: "queued", message: "Job queued" });
+          }
+          sendResponse(payload);
         } catch (e) {
           sendResponse({ error: e.message });
         }
@@ -105,12 +135,28 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       case "JOB_STATUS": {
         try {
           const r = await fetch(`${SERVER}/api/jobs/status/${msg.job_id}`);
-          sendResponse(await r.json());
+          const status = await r.json();
+          if (!status?.error) {
+            broadcast({
+              type: "JOB_UPDATE",
+              jobId: msg.job_id,
+              status: status.status,
+              message: `${status.done || 0}/${status.total || 0}${status.failed ? `, failed ${status.failed}` : ""}`
+            });
+          }
+          sendResponse(status);
         } catch (e) {
           sendResponse({ error: e.message });
         }
         break;
       }
+
+      case "JOB_UPDATE":
+      case "SESSION_CAPTURED":
+      case "RECORDING_SAVED":
+        // Internal broadcast message types are ignored by background listener.
+        sendResponse({ ok: true });
+        break;
 
       default:
         sendResponse({ error: "Unknown message type" });
@@ -119,9 +165,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true; // async response
 });
 
-// ── Badge updater ─────────────────────────────────────────────────────────────
-setInterval(async () => {
-  const online = await checkServer();
-  chrome.action.setBadgeText({ text: online ? "" : "off" });
-  chrome.action.setBadgeBackgroundColor({ color: online ? "#22c55e" : "#ef4444" });
-}, 10000);
+chrome.runtime.onInstalled.addListener(async () => {
+  await ensureBadgeAlarm();
+  await updateBadge();
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  await ensureBadgeAlarm();
+  await updateBadge();
+});
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== BADGE_ALARM) return;
+  await updateBadge();
+});

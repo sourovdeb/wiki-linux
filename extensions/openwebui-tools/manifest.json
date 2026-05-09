@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "OpenWebUI Tools",
+  "version": "1.0.0",
+  "description": "Utility tools for OpenWebUI integration with wiki-linux.",
+  "permissions": ["storage", "tabs", "scripting"],
+  "host_permissions": ["http://127.0.0.1:8080/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "OpenWebUI Tools",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png"
+  }
+}

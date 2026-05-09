@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Root-level (system) maintenance: safe space recovery + health snapshot.
+# Default mode is DRY RUN. Use --apply to perform cleanup actions.
+
+apply="no"
+threshold_pct="85"
+vacuum_time="2weeks"
+vacuum_size="1G"
+keep_installed="2"
+clean_uninstalled="yes"
+
+usage() {
+  cat <<'EOF'
+Usage: wiki-root-maintenance [--apply] [--threshold PCT] [--vacuum-time TIME] [--vacuum-size SIZE]
+                            [--keep-installed N] [--no-clean-uninstalled]
+
+DRY RUN (default): only reports disk/journal/cache state.
+--apply: performs conservative cleanup if root fs usage >= threshold.
+
+Actions (when --apply and threshold is met):
+  - journalctl vacuum (time + size)
+  - pacman cache cleanup via paccache (keep N versions)
+  - remove pacman partial downloads (*.part)
+  - systemd-tmpfiles --clean (safe-at-any-time rules only)
+
+Examples:
+  sudo wiki-root-maintenance
+  sudo wiki-root-maintenance --apply --threshold 90 --vacuum-size 500M
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --apply) apply="yes"; shift ;;
+    --threshold) threshold_pct="${2:-}"; shift 2 ;;
+    --vacuum-time) vacuum_time="${2:-}"; shift 2 ;;
+    --vacuum-size) vacuum_size="${2:-}"; shift 2 ;;
+    --keep-installed) keep_installed="${2:-}"; shift 2 ;;
+    --no-clean-uninstalled) clean_uninstalled="no"; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown arg: $1"; usage; exit 2 ;;
+  esac
+done
+
+if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+  echo "This script must run as root (use sudo)."
+  exit 1
+fi
+
+log_dir="/var/log/wiki-linux"
+mkdir -p "$log_dir"
+ts="$(date -u +%Y%m%d-%H%M%S)"
+log_file="$log_dir/root-maintenance-$ts.log"
+
+root_use_pct="$(df -P / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')"
+
+{
+  echo "[wiki-root-maintenance] start $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+  echo "apply=$apply threshold_pct=$threshold_pct root_use_pct=$root_use_pct"
+  echo "vacuum_time=$vacuum_time vacuum_size=$vacuum_size keep_installed=$keep_installed clean_uninstalled=$clean_uninstalled"
+  echo
+  echo "df -h /:"
+  df -h /
+  echo
+  echo "journalctl --disk-usage:"
+  journalctl --disk-usage 2>/dev/null || echo "(journalctl --disk-usage failed)"
+  echo
+  echo "paccache version:"
+  paccache -V 2>/dev/null || echo "(paccache not available)"
+  echo
+} >>"$log_file" 2>&1
+
+should_apply="no"
+if [[ "$apply" == "yes" ]] && [[ "$root_use_pct" =~ ^[0-9]+$ ]] && (( root_use_pct >= threshold_pct )); then
+  should_apply="yes"
+fi
+
+if [[ "$apply" == "yes" ]] && [[ "$should_apply" != "yes" ]]; then
+  {
+    echo "[wiki-root-maintenance] threshold not met; skipping cleanup"
+    echo "root_use_pct=$root_use_pct threshold_pct=$threshold_pct"
+  } >>"$log_file" 2>&1
+fi
+
+if [[ "$should_apply" == "yes" ]]; then
+  {
+    echo
+    echo "[wiki-root-maintenance] cleanup begin"
+    echo
+
+    echo "1) systemd journal vacuum"
+    journalctl --rotate 2>/dev/null || true
+    journalctl --vacuum-time="$vacuum_time" 2>/dev/null || true
+    journalctl --vacuum-size="$vacuum_size" 2>/dev/null || true
+    journalctl --disk-usage 2>/dev/null || true
+    echo
+
+    echo "2) pacman partial downloads (*.part)"
+    if [[ -d /var/cache/pacman/pkg ]]; then
+      find /var/cache/pacman/pkg -maxdepth 1 -type f -name '*.part' -print -delete 2>/dev/null || true
+    else
+      echo "(no /var/cache/pacman/pkg)"
+    fi
+    echo
+
+    echo "3) pacman cache cleanup (keep installed: $keep_installed)"
+    if command -v paccache >/dev/null 2>&1; then
+      paccache -r -k "$keep_installed" 2>/dev/null || true
+      if [[ "$clean_uninstalled" == "yes" ]]; then
+        paccache -r -u -k 0 2>/dev/null || true
+      fi
+    else
+      echo "(paccache not installed)"
+    fi
+    echo
+
+    echo "4) tmpfiles cleanup"
+    systemd-tmpfiles --clean 2>/dev/null || true
+    echo
+
+    echo "[wiki-root-maintenance] cleanup end"
+  } >>"$log_file" 2>&1
+fi
+
+{
+  echo
+  echo "df -h / (after):"
+  df -h /
+  echo
+  echo "[wiki-root-maintenance] complete $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+} >>"$log_file" 2>&1
+
+echo "$log_file"
+

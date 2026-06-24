@@ -69,6 +69,7 @@ _usage() {
   _box_row "  ${GREEN}task${RESET} ${WHITE}\"<title>\"${RESET}    Log a task note to _meta/tasks/" 62
   _box_row "  ${GREEN}reprocess${RESET} ${WHITE}<file>${RESET}   Force-regenerate a wiki page" 62
   _box_row "  ${GREEN}serve${RESET}              Run monitor in foreground (debug)" 62
+  _box_row "  ${GREEN}where${RESET}              Print the resolved wiki root path" 62
   _box_row "  ${GREEN}config${RESET}             Show resolved configuration" 62
   _box_row "  ${GREEN}help${RESET}               This message" 62
   _box_row "" 62
@@ -244,6 +245,11 @@ cmd_serve() {
   $PYTHON -m src.monitor "${@}"
 }
 
+# ── where ─────────────────────────────────────────────────────────────────────
+cmd_where() {
+  printf '%s\n' "$WIKI_ROOT"
+}
+
 # ── config ────────────────────────────────────────────────────────────────────
 cmd_config() {
   printf '\n%s  Config:%s %s%s%s\n\n' "$GREY" "$RESET" "$CYAN" "$CONFIG" "$RESET"
@@ -267,6 +273,7 @@ case "${1:-help}" in
   task)      shift; cmd_task      "$@";;
   reprocess) shift; cmd_reprocess "$@";;
   serve)     shift; cmd_serve     "$@";;
+  where)           cmd_where         ;;
   config)          cmd_config        ;;
   help|--help|-h)  _usage            ;;
   *) _err "Unknown subcommand: $1"; _usage; exit 1;;
